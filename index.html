@@ -80,6 +80,16 @@
 <div id="needToken" class="needToken" style="display:none">
   <h2>Capture not configured</h2>
   <p>This install needs a captain token. Open the personalised link Michael sent, then add it to your home screen.</p>
+  <div style="margin-top:24px;padding:14px;background:#0d3b29;border:1px solid #1f5a3f;border-radius:8px;text-align:left;font-size:11px;font-family:ui-monospace,Menlo,monospace;color:#7fb89c;word-break:break-all">
+    <div style="color:#ff9090;font-weight:600;margin-bottom:6px">Diagnostics</div>
+    <div>URL: <span id="diagUrl">—</span></div>
+    <div>Token in URL: <span id="diagUrlToken">—</span></div>
+    <div>Token in storage: <span id="diagStoreToken">—</span></div>
+  </div>
+  <div style="margin-top:18px;font-size:13px">
+    <input type="text" id="manualToken" placeholder="Or paste your token here" style="width:100%;padding:10px;background:#0d3b29;color:#f1f3f0;border:1px solid #2a7c54;border-radius:8px;font-family:ui-monospace,Menlo,monospace;font-size:13px">
+    <button type="button" id="manualTokenBtn" style="width:100%;margin-top:8px;background:#2a7c54;color:#fff;border:none;border-radius:8px;padding:12px;font-size:15px;font-weight:600">Use token</button>
+  </div>
 </div>
 
 <div id="app" style="display:none">
@@ -204,6 +214,26 @@ function setCaptainEmail(e) { if (e) localStorage.setItem("riviera.captainEmail"
 
 const CAPTAIN_TOKEN = getCaptainToken();
 if (!CAPTAIN_TOKEN) {
+  // Self-diagnostic so captains (and Michael) can see why
+  try {
+    const u = new URL(location.href);
+    document.getElementById("diagUrl").textContent = location.href;
+    const urlT = u.searchParams.get("t");
+    document.getElementById("diagUrlToken").textContent = urlT
+      ? `${urlT} (length ${urlT.length})`
+      : "(none)";
+    document.getElementById("diagStoreToken").textContent =
+      localStorage.getItem("riviera.captainToken") || "(none)";
+  } catch (_e) {}
+  document.getElementById("manualTokenBtn").addEventListener("click", () => {
+    const v = document.getElementById("manualToken").value.trim();
+    if (v.length >= 16) {
+      localStorage.setItem("riviera.captainToken", v);
+      location.reload();
+    } else {
+      alert("Token too short — should be at least 16 characters.");
+    }
+  });
   document.getElementById("needToken").style.display = "block";
   throw new Error("No captain token");
 }
