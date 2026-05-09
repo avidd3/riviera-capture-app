@@ -1246,12 +1246,25 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && na
   document.getElementById("captainName").textContent = stored || ("captain ••" + CAPTAIN_TOKEN.slice(-4));
 })();
 
-// Service worker
+// Service worker — intentionally NOT registered. The previous SW versions
+// trapped iOS PWA installs on stale cached HTML. We register sw.js ONCE more
+// only so the self-destruct SW takes over from the old one and unregisters
+// itself, then immediately tear it down here too. Future loads run pure
+// network-first; IndexedDB still provides offline-write resilience.
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js").catch(() => {});
-  navigator.serviceWorker.addEventListener("message", (e) => {
-    if (e.data?.type === "drain") drainQueue();
-  });
+  navigator.serviceWorker.getRegistrations().then(async (regs) => {
+    if (regs.length === 0) {
+      // Fresh install — nothing to clean up. Skip registering anything.
+      return;
+    }
+    // Old SW present: register the self-destruct, let it activate, then bail.
+    try { await navigator.serviceWorker.register("sw.js"); } catch (_e) {}
+  }).catch(() => {});
+  // Belt-and-suspenders cache nuke for cases where the SW unregister doesn't
+  // automatically clear the storage bucket on iOS.
+  if (window.caches && caches.keys) {
+    caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {});
+  }
 }
 
 // Language toggle wiring
