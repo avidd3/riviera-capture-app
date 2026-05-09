@@ -21,9 +21,13 @@
   .langWrap{display:flex;gap:2px;border:1px solid #1f5a3f;border-radius:6px;overflow:hidden}
   .langBtn{background:transparent;border:none;color:#7fb89c;padding:5px 9px;font-size:11px;cursor:pointer;font-weight:600;letter-spacing:.05em}
   .langBtn.on{background:#2a7c54;color:#fff}
-  .queueBadge{background:#1f5a3f;border:1px solid #2a7c54;padding:6px 10px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .iconBtn{background:transparent;border:1px solid #1f5a3f;color:#7fb89c;padding:5px 8px;font-size:13px;cursor:pointer;border-radius:6px;line-height:1}
+  .queueBadge{background:#1f5a3f;border:1px solid #2a7c54;padding:6px 10px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;display:inline-flex;flex-direction:column;align-items:center;line-height:1.1}
+  .queueBadge .qSub{font-size:9px;font-weight:400;color:#7fb89c;letter-spacing:0;text-transform:none;margin-top:2px}
   .queueBadge.has{background:#7a4500;border-color:#a05a00}
+  .queueBadge.has .qSub{color:#e6c089}
   .queueBadge.error{background:#7a1f1f;border-color:#a02f2f}
+  .queueBadge.error .qSub{color:#e69090}
   main{padding:16px;max-width:640px;margin:0 auto}
   section{background:#11432f;border:1px solid #1f5a3f;border-radius:12px;padding:14px;margin-bottom:14px}
   section h2{margin:0 0 10px;font-size:13px;font-weight:600;color:#7fb89c;text-transform:uppercase;letter-spacing:.05em;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
@@ -47,23 +51,18 @@
   .captureBtn.upload{background:#1f5a3f;border:1px solid #2a7c54}
   .captureBtn.upload:active{background:#2a7c54}
   input[type=file]{display:none}
-  .saveAllRoll{display:none;margin-top:10px;background:transparent;border:1px dashed #7fb89c;color:#7fb89c;border-radius:8px;padding:10px;font-size:13px;font-weight:500;cursor:pointer;width:100%}
-  .saveAllRoll.show{display:block}
-  .saveAllRoll:active{background:#1f5a3f;color:#fff}
   .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:12px}
   .thumb{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#0d3b29;cursor:pointer}
   .thumb img,.thumb video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
   .thumb .rm{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.75);color:#fff;border:none;border-radius:50%;width:26px;height:26px;font-size:14px;cursor:pointer;line-height:1;z-index:2}
-  .thumb .saveRoll{position:absolute;top:4px;left:4px;background:rgba(0,0,0,.75);color:#fff;border:none;border-radius:50%;width:26px;height:26px;font-size:14px;cursor:pointer;line-height:1;z-index:2}
-  .thumb.savedRoll .saveRoll{background:#2a7c54;color:#fff}
-  .thumb .meta{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.85));color:#fff;font-size:10px;padding:10px 4px 4px;text-align:center;display:flex;justify-content:space-between;padding:10px 6px 4px}
-  .thumb .meta .badges{display:flex;gap:3px}
+  .thumb .meta{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.85));color:#fff;font-size:10px;display:flex;justify-content:space-between;padding:10px 6px 4px}
+  .thumb .badges{display:flex;gap:3px}
   .thumb .badge{font-size:9px;background:rgba(255,255,255,.2);padding:1px 4px;border-radius:3px}
   .thumb .badge.video{background:rgba(58,141,232,.6)}
   .thumb .badge.desc{background:rgba(127,184,156,.6)}
   .thumb .badge.tags{background:rgba(160,90,0,.7)}
   .submit{display:block;width:100%;background:#3da774;color:#fff;border:none;border-radius:12px;padding:18px;font-size:18px;font-weight:700;cursor:pointer;margin-top:8px}
-  .submit:disabled{opacity:.5;cursor:not-allowed}
+  .submit:disabled{background:#1f5a3f;color:#7fb89c;cursor:not-allowed}
   .submit:active:not(:disabled){background:#46c089}
   .toast{position:fixed;left:16px;right:16px;bottom:20px;background:#1f5a3f;color:#fff;padding:14px 16px;border-radius:10px;font-size:14px;text-align:center;z-index:60;border:1px solid #2a7c54;transform:translateY(100px);opacity:0;transition:all .25s ease}
   .toast.show{transform:translateY(0);opacity:1}
@@ -71,8 +70,12 @@
   .overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:40;display:none;align-items:flex-end;justify-content:center}
   .overlay.show{display:flex}
   .sheet{background:#11432f;width:100%;max-width:640px;max-height:90vh;border-radius:16px 16px 0 0;border-top:1px solid #1f5a3f;padding:16px;overflow-y:auto;position:relative}
-  .sheet h3{margin:0 0 12px;font-size:15px;font-weight:600}
+  .sheet h3{margin:0 0 12px;font-size:15px;font-weight:600;display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding-right:40px}
+  .sheet h3 .sub{font-size:11px;color:#7fb89c;font-weight:400}
   .closeBtn{position:absolute;top:12px;right:12px;background:transparent;border:1px solid #2a7c54;color:#f1f3f0;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;line-height:1;z-index:2}
+  .qToolbar{display:flex;gap:8px;margin-bottom:12px}
+  .qToolbar button{flex:1;background:#1f5a3f;border:1px solid #2a7c54;color:#f1f3f0;padding:10px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer}
+  .qToolbar button:active{background:#2a7c54}
   .qItem{background:#0d3b29;border:1px solid #1f5a3f;border-radius:10px;padding:12px;margin-bottom:8px;font-size:13px}
   .qItem .qHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-weight:600}
   .qItem .status{font-size:11px;padding:2px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.05em}
@@ -102,10 +105,13 @@
   .peSharedTag::before{content:"🔒";font-size:9px}
   .peActions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
   .peActions button{flex:1;min-width:120px;padding:12px;font-size:14px;font-weight:600;border:none;border-radius:8px;cursor:pointer}
-  .peSaveRoll{background:#1f5a3f;color:#fff;border:1px solid #2a7c54}
-  .peSaveRoll.done{background:#2a7c54;color:#fff}
   .peRemove{background:#5a1f1f;color:#fff}
   .peDone{background:#3da774;color:#fff}
+  /* Debug log */
+  .debugLog{font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#0d3b29;border:1px solid #1f5a3f;border-radius:8px;padding:8px;max-height:50vh;overflow-y:auto;line-height:1.5}
+  .debugLog .row{display:block;color:#d3e6db;border-bottom:1px solid #11432f;padding:2px 0;word-break:break-all;flex:initial}
+  .debugLog .row .t{color:#5e8c75;margin-right:6px}
+  .debugLog .row.err{color:#ff9090}
 </style>
 </head>
 <body>
@@ -139,7 +145,11 @@
       <button type="button" class="langBtn" data-lang="fr">FR</button>
       <button type="button" class="langBtn" data-lang="en">EN</button>
     </div>
-    <button class="queueBadge" id="queueBadge" type="button" data-i18n="queueAllSynced">all synced</button>
+    <button class="iconBtn" id="debugBtn" type="button" title="Debug log">🐞</button>
+    <button class="queueBadge" id="queueBadge" type="button">
+      <span id="queueBadgeMain">…</span>
+      <span class="qSub" id="queueBadgeSub"></span>
+    </button>
   </div>
 </header>
 
@@ -196,7 +206,6 @@
   <input type="file" id="capVideoInput" accept="video/*" capture="environment">
   <input type="file" id="capUploadInput" accept="image/*,video/*" multiple>
   <div class="thumbs" id="thumbs"></div>
-  <button type="button" class="saveAllRoll" id="saveAllRollBtn" data-i18n="saveAllToRoll">💾 Save unsaved photos to camera roll</button>
 </section>
 
 <button class="submit" id="submitBtn" data-i18n="submit" disabled>Save submission</button>
@@ -210,7 +219,11 @@
 <div class="overlay" id="queueOverlay">
   <div class="sheet">
     <button class="closeBtn" id="queueClose" type="button">×</button>
-    <h3 data-i18n="queueTitle">Upload queue</h3>
+    <h3><span data-i18n="queueTitle">Upload queue</span> <span class="sub" id="queueSub"></span></h3>
+    <div class="qToolbar">
+      <button type="button" id="qExportBtn" data-i18n="queueExport">⬇ Export pending to Files</button>
+      <button type="button" id="qClearDoneBtn" data-i18n="queueClearDone">Clear completed</button>
+    </div>
     <div id="queueList"></div>
   </div>
 </div>
@@ -234,10 +247,22 @@
       <div class="pillrow" id="peExtraTags"></div>
     </div>
     <div class="peActions">
-      <button type="button" class="peSaveRoll" id="peSaveRollBtn" data-i18n="photoSaveToRoll">💾 Save to camera roll</button>
       <button type="button" class="peRemove" id="peRemoveBtn" data-i18n="photoRemove">🗑 Remove</button>
       <button type="button" class="peDone" id="peDoneBtn" data-i18n="photoEditDone">Done</button>
     </div>
+  </div>
+</div>
+
+<!-- Debug log overlay -->
+<div class="overlay" id="debugOverlay">
+  <div class="sheet">
+    <button class="closeBtn" id="debugClose" type="button">×</button>
+    <h3><span data-i18n="debugTitle">Debug log</span> <span class="sub" id="debugSub"></span></h3>
+    <div class="qToolbar">
+      <button type="button" id="debugCopyBtn" data-i18n="debugCopy">📋 Copy log</button>
+      <button type="button" id="debugClearBtn" data-i18n="debugClear">Clear</button>
+    </div>
+    <div class="debugLog" id="debugList"></div>
   </div>
 </div>
 
@@ -266,18 +291,28 @@ const I18N = {
     capturePhoto: "Photo",
     captureVideo: "Vidéo",
     captureUpload: "Depuis Photos",
-    saveAllToRoll: "💾 Enregistrer toutes les photos non sauvegardées dans Photos",
     submit: "Enregistrer",
+    submitMissing: m => "Manque : " + m,
+    missingCore: "Cœur",
+    missingGW: "Mur végétal",
+    missingPhoto: "1 photo",
     submitSaved: n => `Enregistré. ${n} fichier${n===1?"":"s"} en file.`,
     queueAllSynced: "tout synchronisé",
     queueOffline: "hors ligne",
-    queuePending: n => `⤴︎ ${n} en attente`,
-    queueErrors: n => `⚠️ ${n} erreur${n===1?"":"s"}`,
+    queuePending: n => `${n} en attente`,
+    queueErrors: n => `${n} erreur${n===1?"":"s"}`,
+    queueLastSync: ts => "MAJ " + ts,
     queueTitle: "File d'envoi",
+    queueSub: (p, d) => `${p} en attente · ${d} terminés`,
     queueEmpty: "Aucune saisie en file.",
     queueRetry: "Réessayer",
     queueClear: "Effacer",
     queueDiscard: "Annuler",
+    queueExport: "⬇ Exporter en attente vers Fichiers",
+    queueClearDone: "Effacer les terminés",
+    queueExportEmpty: "Aucun fichier à exporter.",
+    queueExportShared: "Sélectionne « Enregistrer dans Fichiers » dans le menu",
+    queueExportDownloaded: n => `${n} fichier${n===1?"":"s"} téléchargé${n===1?"":"s"}.`,
     needTokenH: "Capture non configurée",
     needTokenP: "Cette installation a besoin d'un jeton de capitaine. Ouvre le lien personnalisé envoyé par Michael, puis ajoute-le à l'écran d'accueil.",
     needTokenInput: "Ou colle ton jeton ici",
@@ -293,13 +328,13 @@ const I18N = {
     photoSharedTags: "Étiquettes partagées",
     photoSharedTagsHint: "depuis la saisie",
     photoExtraTags: "Étiquettes spécifiques à ce fichier",
-    photoSaveToRoll: "💾 Enregistrer dans Photos",
-    photoSavedToRoll: "✓ Enregistré dans Photos",
     photoRemove: "🗑 Retirer",
     photoEditDone: "Terminé",
     optional: "optionnel",
-    toastSaveRollOk: "Partagé — choisis « Enregistrer l'image » dans le menu",
-    toastSaveRollUnsupported: "Ton navigateur ne permet pas l'enregistrement direct. Long-appui sur la vignette → Enregistrer.",
+    debugTitle: "Journal de débogage",
+    debugCopy: "📋 Copier",
+    debugClear: "Effacer",
+    debugCopied: "Journal copié dans le presse-papier",
     toastReadFail: m => "Impossible de lire le fichier : " + m,
     toastVideoFail: m => "Vignette vidéo échouée : " + m
   },
@@ -321,18 +356,28 @@ const I18N = {
     capturePhoto: "Photo",
     captureVideo: "Video",
     captureUpload: "From Photos",
-    saveAllToRoll: "💾 Save all unsaved photos to camera roll",
     submit: "Save submission",
+    submitMissing: m => "Need: " + m,
+    missingCore: "Core",
+    missingGW: "Green Wall",
+    missingPhoto: "1 photo",
     submitSaved: n => `Saved. ${n} file${n===1?"":"s"} queued.`,
     queueAllSynced: "all synced",
     queueOffline: "offline",
-    queuePending: n => `⤴︎ ${n} pending`,
-    queueErrors: n => `⚠️ ${n} error${n===1?"":"s"}`,
+    queuePending: n => `${n} pending`,
+    queueErrors: n => `${n} error${n===1?"":"s"}`,
+    queueLastSync: ts => "synced " + ts,
     queueTitle: "Upload queue",
+    queueSub: (p, d) => `${p} pending · ${d} done`,
     queueEmpty: "No submissions in queue.",
     queueRetry: "Retry",
     queueClear: "Clear",
     queueDiscard: "Discard",
+    queueExport: "⬇ Export pending to Files",
+    queueClearDone: "Clear completed",
+    queueExportEmpty: "Nothing to export.",
+    queueExportShared: "Pick \"Save to Files\" in the menu",
+    queueExportDownloaded: n => `${n} file${n===1?"":"s"} downloaded.`,
     needTokenH: "Capture not configured",
     needTokenP: "This install needs a captain token. Open the personalised link Michael sent, then add it to your home screen.",
     needTokenInput: "Or paste your token here",
@@ -348,13 +393,13 @@ const I18N = {
     photoSharedTags: "Shared tags",
     photoSharedTagsHint: "from submission",
     photoExtraTags: "Extra tags for this file",
-    photoSaveToRoll: "💾 Save to camera roll",
-    photoSavedToRoll: "✓ Saved to camera roll",
     photoRemove: "🗑 Remove",
     photoEditDone: "Done",
     optional: "optional",
-    toastSaveRollOk: "Shared — pick \"Save Image\" from the menu",
-    toastSaveRollUnsupported: "Your browser can't save directly. Long-press the thumbnail → Save.",
+    debugTitle: "Debug log",
+    debugCopy: "📋 Copy",
+    debugClear: "Clear",
+    debugCopied: "Log copied to clipboard",
     toastReadFail: m => "Couldn't read file: " + m,
     toastVideoFail: m => "Video thumbnail failed: " + m
   }
@@ -389,12 +434,39 @@ function setLang(l) {
   localStorage.setItem("riviera.lang", l);
   document.querySelectorAll(".langBtn").forEach(b => b.classList.toggle("on", b.dataset.lang === l));
   applyI18n();
-  // Re-render dynamic content that uses translated values
   rebuildPills();
   renderQueueBadge();
   renderQueueSheet();
   renderThumbs();
+  onFormChange();
 }
+
+// ============================================================
+// Debug log (in-memory, viewable from header 🐞 button)
+// ============================================================
+const DEBUG_LOG = [];
+const DEBUG_LOG_MAX = 250;
+function LOG(msg, ...extra) {
+  const ts = new Date().toISOString().slice(11, 23);
+  let text = msg;
+  if (extra.length) {
+    text += " " + extra.map(x => {
+      try { return typeof x === "string" ? x : JSON.stringify(x); }
+      catch (_e) { return String(x); }
+    }).join(" ");
+  }
+  DEBUG_LOG.push({ ts, text, isErr: msg.startsWith("err.") });
+  if (DEBUG_LOG.length > DEBUG_LOG_MAX) DEBUG_LOG.shift();
+  try { console.log("[riv]", ts, text); } catch (_e) {}
+  // If the debug overlay is open, refresh it live
+  const ov = document.getElementById("debugOverlay");
+  if (ov && ov.classList.contains("show")) renderDebugList();
+}
+window.addEventListener("error", e => LOG("err.window", e.message || "?", (e.filename || "").slice(-40), e.lineno || 0));
+window.addEventListener("unhandledrejection", e => {
+  const r = e.reason;
+  LOG("err.unhandled", (r && (r.message || String(r))) || "unknown");
+});
 
 // ============================================================
 // Config
@@ -410,13 +482,11 @@ const CORES = ["A", "B"];
 const GWS = ["GW1", "GW2", "GW3", "GW4"];
 
 // Type values: stored canonically in French (matches existing DB rows).
-// Display label is the user's language; data value sent to DB is always FR.
 const TYPES = [
   { value: "Élément",         labelKey: "typeElement" },
   { value: "Zone de travail", labelKey: "typeWorkZone" },
   { value: "Inventaire",      labelKey: "typeInventory" }
 ];
-// Inspection: stored as boolean on the parent row; pill values map to true/false/null.
 const INSP = [
   { value: "false", labelKey: "inspNotReady" },
   { value: "true",  labelKey: "inspReady" }
@@ -441,12 +511,8 @@ const TAGS = [
 ];
 
 // ============================================================
-// Captain identity
+// Cookie + captain identity
 // ============================================================
-// Cookie helpers — needed because iOS Safari and standalone PWAs maintain
-// SEPARATE localStorage. Cookies survive the Safari ↔ PWA boundary, so we
-// mirror the token into both stores. Long expiry (1 year) since captain
-// tokens are stable.
 function setCookie(name, value, days) {
   const exp = new Date(Date.now() + days * 86400000).toUTCString();
   document.cookie = `${name}=${encodeURIComponent(value)}; expires=${exp}; path=/; SameSite=Lax; Secure`;
@@ -455,12 +521,7 @@ function getCookie(name) {
   const m = document.cookie.match(new RegExp("(?:^|;\\s*)" + name + "=([^;]+)"));
   return m ? decodeURIComponent(m[1]) : null;
 }
-
 function getCaptainToken() {
-  // Token can arrive in either ?t=... (query) or #t=... (fragment).
-  // Whichever lane it comes through, mirror it to BOTH localStorage and a
-  // cookie so the home-screen PWA (different storage context on iOS) can
-  // still read it back when launched from the icon.
   let t = null;
   try {
     const url = new URL(location.href);
@@ -469,13 +530,12 @@ function getCaptainToken() {
       const hp = new URLSearchParams(location.hash.replace(/^#/, ""));
       t = hp.get("t");
     }
-  } catch (_e) { /* ignore */ }
+  } catch (_e) {}
   if (t && t.length >= 16) {
     try { localStorage.setItem("riviera.captainToken", t); } catch (_e) {}
     setCookie("riviera.captainToken", t, 365);
     return t;
   }
-  // Fallback chain: localStorage → cookie. Backfill the missing one.
   const fromLs = (() => { try { return localStorage.getItem("riviera.captainToken"); } catch (_e) { return null; } })();
   const fromCk = getCookie("riviera.captainToken");
   if (fromLs && !fromCk) setCookie("riviera.captainToken", fromLs, 365);
@@ -485,7 +545,7 @@ function getCaptainToken() {
 function getCaptainEmail() { return localStorage.getItem("riviera.captainEmail") || ""; }
 
 const CAPTAIN_TOKEN = getCaptainToken();
-applyI18n(); // localize the needToken view too
+applyI18n();
 if (!CAPTAIN_TOKEN) {
   try {
     const u = new URL(location.href);
@@ -505,7 +565,8 @@ if (!CAPTAIN_TOKEN) {
   document.getElementById("manualTokenBtn").addEventListener("click", () => {
     const v = document.getElementById("manualToken").value.trim();
     if (v.length >= 16) {
-      localStorage.setItem("riviera.captainToken", v);
+      try { localStorage.setItem("riviera.captainToken", v); } catch (_e) {}
+      setCookie("riviera.captainToken", v, 365);
       location.reload();
     } else {
       alert("Token too short — should be at least 16 characters.");
@@ -515,6 +576,7 @@ if (!CAPTAIN_TOKEN) {
   throw new Error("No captain token");
 }
 document.getElementById("app").style.display = "block";
+LOG("boot", "lang=" + LANG, "tokenSuffix=" + CAPTAIN_TOKEN.slice(-4));
 
 // ============================================================
 // IndexedDB
@@ -575,10 +637,6 @@ function uuid() {
   });
 }
 
-// Pill builders.  `options` is either a list of strings (label === value)
-// or a list of {value, labelKey} objects.  `labelOf(opt)` resolves the
-// display label for the current language; `valueOf(opt)` returns the
-// canonical data value to send back to the API.
 function buildPills(rowId, options, allowNone = false) {
   const row = document.getElementById(rowId);
   row.innerHTML = "";
@@ -612,12 +670,6 @@ function buildPills(rowId, options, allowNone = false) {
     clear: () => {
       selected = null;
       row.querySelectorAll(".pill").forEach(p => p.classList.remove("on"));
-    },
-    relabel: () => {
-      row.querySelectorAll(".pill").forEach(p => {
-        const k = p.dataset.labelKey;
-        if (k) p.textContent = t(k);
-      });
     }
   };
 }
@@ -650,7 +702,6 @@ function buildTagPills(rowId) {
 
 let corePicker, gwPicker, typePicker, inspPicker, tagPicker;
 function rebuildPills() {
-  // Re-render pickers in current language; preserve selection.
   const prev = {
     core: corePicker?.get(), gw: gwPicker?.get(),
     type: typePicker?.get(), insp: inspPicker?.get(),
@@ -674,12 +725,6 @@ function rebuildPills() {
 // ============================================================
 // Staging (in-memory until Save)
 // ============================================================
-// Each entry: {
-//   id, blob, mime, mediaKind ("image" | "video"),
-//   width, height, bytes, captured_at,
-//   thumbDataUrl, filenameOriginal, source ("photo"|"video"|"upload"),
-//   description, extraTags: Set<string>, savedToRoll: bool
-// }
 let stagedPhotos = [];
 
 function renderThumbs() {
@@ -687,7 +732,7 @@ function renderThumbs() {
   wrap.innerHTML = "";
   stagedPhotos.forEach((p, idx) => {
     const div = document.createElement("div");
-    div.className = "thumb" + (p.savedToRoll ? " savedRoll" : "");
+    div.className = "thumb";
     div.dataset.idx = idx;
     const img = document.createElement("img");
     img.src = p.thumbDataUrl;
@@ -707,34 +752,16 @@ function renderThumbs() {
     rm.title = t("photoRemove");
     rm.addEventListener("click", (e) => {
       e.stopPropagation();
+      LOG("thumb.remove", "idx=" + idx, "id=" + (p.id || "?"));
       stagedPhotos.splice(idx, 1);
-      renderThumbs(); onFormChange();
-      updateSaveAllRoll();
+      renderThumbs();
+      onFormChange();
     });
     div.appendChild(rm);
-    // Save-to-camera-roll button (skip for items uploaded from Photos — already there)
-    if (p.source !== "upload") {
-      const sv = document.createElement("button");
-      sv.className = "saveRoll"; sv.type = "button";
-      sv.textContent = p.savedToRoll ? "✓" : "💾";
-      sv.title = t(p.savedToRoll ? "photoSavedToRoll" : "photoSaveToRoll");
-      sv.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        await saveToCameraRoll(p, sv);
-      });
-      div.appendChild(sv);
-    }
     div.addEventListener("click", () => openPhotoEditor(idx));
     wrap.appendChild(div);
   });
   onFormChange();
-  updateSaveAllRoll();
-}
-
-function updateSaveAllRoll() {
-  const btn = document.getElementById("saveAllRollBtn");
-  const candidates = stagedPhotos.filter(p => p.source !== "upload" && !p.savedToRoll);
-  btn.classList.toggle("show", candidates.length > 0);
 }
 
 // ============================================================
@@ -742,7 +769,7 @@ function updateSaveAllRoll() {
 // ============================================================
 async function blobToImageThumb(blob, maxDim = 320) {
   const bmp = await createImageBitmap(blob);
-  // Capture dims BEFORE close — bmp.width/height can return 0 after .close()
+  // Capture dims BEFORE close — bmp.width/height return 0 after .close().
   const srcWidth = bmp.width, srcHeight = bmp.height;
   const scale = Math.min(1, maxDim / Math.max(srcWidth, srcHeight));
   const w = Math.max(1, Math.round(srcWidth * scale));
@@ -760,12 +787,8 @@ async function blobToVideoThumb(blob, maxDim = 320) {
     video.muted = true; video.playsInline = true;
     const url = URL.createObjectURL(blob);
     let done = false;
-    const cleanup = () => { try { URL.revokeObjectURL(url); } catch (_) {} };
-    video.addEventListener("loadeddata", () => {
-      try { video.currentTime = Math.min(0.1, (video.duration || 1) / 4); }
-      catch (e) { done = true; cleanup(); reject(e); }
-    }, { once: true });
-    video.addEventListener("seeked", () => {
+    const fail = (msg) => { if (!done) { done = true; try { URL.revokeObjectURL(url); } catch (_) {} reject(new Error(msg)); } };
+    const ok = () => {
       if (done) return; done = true;
       try {
         const srcWidth = video.videoWidth || 0, srcHeight = video.videoHeight || 0;
@@ -775,11 +798,19 @@ async function blobToVideoThumb(blob, maxDim = 320) {
         const canvas = document.createElement("canvas");
         canvas.width = w; canvas.height = h;
         canvas.getContext("2d").drawImage(video, 0, 0, w, h);
-        cleanup();
+        try { URL.revokeObjectURL(url); } catch (_) {}
         resolve({ url: canvas.toDataURL("image/jpeg", 0.6), srcWidth, srcHeight });
-      } catch (e) { cleanup(); reject(e); }
+      } catch (e) { try { URL.revokeObjectURL(url); } catch (_) {} reject(e); }
+    };
+    video.addEventListener("loadeddata", () => {
+      try { video.currentTime = Math.min(0.1, (video.duration || 1) / 4); }
+      catch (_e) { ok(); /* fall back to current frame */ }
     }, { once: true });
-    video.addEventListener("error", () => { cleanup(); reject(new Error("video load failed")); }, { once: true });
+    video.addEventListener("seeked", ok, { once: true });
+    video.addEventListener("error", () => fail("video load failed"), { once: true });
+    // Safety net: if seeked never fires (some iOS .mov), draw whatever's loaded after 1s.
+    setTimeout(() => { if (!done && video.readyState >= 2) ok(); }, 1500);
+    setTimeout(() => fail("video thumb timeout"), 6000);
     video.src = url;
   });
 }
@@ -789,29 +820,35 @@ async function blobToVideoThumb(blob, maxDim = 320) {
 // ============================================================
 function bindCapture(btnId, inputId, source) {
   document.getElementById(btnId).addEventListener("click", () => {
+    LOG("capture.click", source);
     document.getElementById(inputId).click();
   });
   document.getElementById(inputId).addEventListener("change", async (e) => {
     const files = Array.from(e.target.files || []);
+    LOG("capture.change", source, "files=" + files.length);
     for (const file of files) await stageFile(file, source);
-    e.target.value = ""; // allow re-pick same file
+    e.target.value = "";
     renderThumbs();
   });
 }
 async function stageFile(file, source) {
   const mime = file.type || (source === "video" ? "video/mp4" : "image/jpeg");
   const mediaKind = mime.startsWith("video/") ? "video" : "image";
+  LOG("stage.start", source, "mime=" + mime, "bytes=" + file.size, "name=" + (file.name || "(unnamed)"));
   let thumb;
   try {
     thumb = mediaKind === "video"
       ? await blobToVideoThumb(file)
       : await blobToImageThumb(file);
+    LOG("thumb.ok", mediaKind, thumb.srcWidth + "x" + thumb.srcHeight);
   } catch (err) {
+    LOG("err.thumb", mediaKind, err.message || String(err));
     toast(t(mediaKind === "video" ? "toastVideoFail" : "toastReadFail", err.message || String(err)), true);
     return;
   }
+  const id = uuid();
   stagedPhotos.push({
-    id: uuid(),
+    id,
     blob: file,
     mime,
     mediaKind,
@@ -821,98 +858,52 @@ async function stageFile(file, source) {
     captured_at: new Date().toISOString(),
     thumbDataUrl: thumb.url,
     filenameOriginal: file.name || null,
-    source,                       // "photo" | "video" | "upload"
+    source,
     description: "",
-    extraTags: new Set(),
-    savedToRoll: false
+    extraTags: new Set()
   });
+  LOG("stage.ok", "id=" + id.slice(0,8), "kind=" + mediaKind, "stagedCount=" + stagedPhotos.length);
 }
 bindCapture("capPhotoBtn",  "capPhotoInput",  "photo");
 bindCapture("capVideoBtn",  "capVideoInput",  "video");
 bindCapture("capUploadBtn", "capUploadInput", "upload");
 
 // ============================================================
-// Save to camera roll (Web Share API)
-// ============================================================
-async function saveToCameraRoll(stagedPhoto, btnEl) {
-  const file = stagedPhoto.blob;
-  // Re-wrap as a File so iOS share sheet shows correct filename.
-  const named = (file instanceof File && file.name)
-    ? file
-    : new File([file], stagedPhoto.filenameOriginal || `riviera-${Date.now()}.${stagedPhoto.mediaKind === "video" ? "mp4" : "jpg"}`, { type: stagedPhoto.mime });
-  if (navigator.canShare && navigator.canShare({ files: [named] })) {
-    try {
-      await navigator.share({ files: [named], title: "Riviera capture" });
-      stagedPhoto.savedToRoll = true;
-      if (btnEl) { btnEl.textContent = "✓"; btnEl.title = t("photoSavedToRoll"); }
-      // Mark the thumb visually
-      renderThumbs();
-      toast(t("toastSaveRollOk"));
-      return true;
-    } catch (e) {
-      if (e.name !== "AbortError") toast(e.message || String(e), true);
-      return false;
-    }
-  }
-  // Fallback (no Web Share files): trigger a download.
-  try {
-    const url = URL.createObjectURL(named);
-    const a = document.createElement("a");
-    a.href = url; a.download = named.name;
-    document.body.appendChild(a); a.click();
-    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
-    toast(t("toastSaveRollUnsupported"));
-    stagedPhoto.savedToRoll = true;
-    renderThumbs();
-    return true;
-  } catch (e) {
-    toast(e.message || String(e), true);
-    return false;
-  }
-}
-document.getElementById("saveAllRollBtn").addEventListener("click", async () => {
-  for (const p of stagedPhotos) {
-    if (p.source !== "upload" && !p.savedToRoll) {
-      const ok = await saveToCameraRoll(p);
-      if (!ok) break; // user dismissed share sheet — don't keep popping it
-    }
-  }
-});
-
-// ============================================================
 // Per-photo editor
 // ============================================================
 let editorIdx = -1;
+let editorPreviewObjectUrl = null;
 function openPhotoEditor(idx) {
   editorIdx = idx;
   const p = stagedPhotos[idx];
-  if (!p) return;
+  if (!p) { LOG("err.editor.missing", "idx=" + idx); return; }
+  LOG("editor.open", "idx=" + idx, "kind=" + p.mediaKind);
   const preview = document.getElementById("pePreview");
   preview.innerHTML = "";
+  if (editorPreviewObjectUrl) { try { URL.revokeObjectURL(editorPreviewObjectUrl); } catch (_) {} editorPreviewObjectUrl = null; }
   if (p.mediaKind === "video") {
     const v = document.createElement("video");
-    v.src = URL.createObjectURL(p.blob);
+    editorPreviewObjectUrl = URL.createObjectURL(p.blob);
+    v.src = editorPreviewObjectUrl;
     v.controls = true; v.playsInline = true;
     preview.appendChild(v);
   } else {
     const img = document.createElement("img");
-    img.src = p.thumbDataUrl; // small preview is fine; original blob is huge
+    img.src = p.thumbDataUrl;
     preview.appendChild(img);
   }
   document.getElementById("peDesc").value = p.description || "";
 
-  // Shared (read-only here) tags
   const sharedTags = tagPicker.get();
   const sharedHost = document.getElementById("peSharedTags");
   sharedHost.innerHTML = sharedTags.length
     ? sharedTags.map(name => `<span class="peSharedTag">${escapeHtml(name)}</span>`).join("")
     : `<span style="color:#5e8c75;font-size:12px">—</span>`;
 
-  // Extra-tag pills (additive, per-photo)
   const extraHost = document.getElementById("peExtraTags");
   extraHost.innerHTML = "";
   TAGS.forEach(tag => {
-    if (sharedTags.includes(tag.name)) return; // already covered by shared
+    if (sharedTags.includes(tag.name)) return;
     const b = document.createElement("button");
     b.type = "button";
     b.className = "pill tag " + tag.category + (p.extraTags.has(tag.name) ? " on" : "");
@@ -924,43 +915,45 @@ function openPhotoEditor(idx) {
     extraHost.appendChild(b);
   });
 
-  // Save-to-roll button reflects per-photo state
-  const sv = document.getElementById("peSaveRollBtn");
-  sv.classList.toggle("done", !!p.savedToRoll);
-  sv.textContent = t(p.savedToRoll ? "photoSavedToRoll" : "photoSaveToRoll");
-  sv.style.display = (p.source === "upload") ? "none" : "";
-
   document.getElementById("peOverlay").classList.add("show");
 }
-function closePhotoEditor() {
-  const p = stagedPhotos[editorIdx];
-  if (p) p.description = document.getElementById("peDesc").value;
+function closePhotoEditor(saveDesc = true) {
+  if (saveDesc) {
+    const p = stagedPhotos[editorIdx];
+    if (p) p.description = document.getElementById("peDesc").value;
+  }
+  if (editorPreviewObjectUrl) { try { URL.revokeObjectURL(editorPreviewObjectUrl); } catch (_) {} editorPreviewObjectUrl = null; }
   document.getElementById("peOverlay").classList.remove("show");
+  LOG("editor.close", "idx=" + editorIdx);
   editorIdx = -1;
   renderThumbs();
 }
-document.getElementById("peCloseBtn").addEventListener("click", closePhotoEditor);
-document.getElementById("peDoneBtn").addEventListener("click", closePhotoEditor);
+document.getElementById("peCloseBtn").addEventListener("click", () => closePhotoEditor());
+document.getElementById("peDoneBtn").addEventListener("click", () => closePhotoEditor());
 document.getElementById("peRemoveBtn").addEventListener("click", () => {
-  if (editorIdx >= 0) stagedPhotos.splice(editorIdx, 1);
-  document.getElementById("peOverlay").classList.remove("show");
-  editorIdx = -1;
-  renderThumbs();
-});
-document.getElementById("peSaveRollBtn").addEventListener("click", async () => {
-  const p = stagedPhotos[editorIdx];
-  if (!p) return;
-  const ok = await saveToCameraRoll(p, null);
-  if (ok) {
-    const sv = document.getElementById("peSaveRollBtn");
-    sv.classList.add("done");
-    sv.textContent = t("photoSavedToRoll");
+  if (editorIdx >= 0) {
+    LOG("editor.remove", "idx=" + editorIdx);
+    stagedPhotos.splice(editorIdx, 1);
   }
+  closePhotoEditor(false);
 });
 
+// ============================================================
+// Form-state + Save
+// ============================================================
 function onFormChange() {
-  const ready = !!gwPicker?.get() && !!corePicker?.get() && stagedPhotos.length > 0;
-  document.getElementById("submitBtn").disabled = !ready;
+  const missing = [];
+  if (!corePicker?.get())          missing.push(t("missingCore"));
+  if (!gwPicker?.get())            missing.push(t("missingGW"));
+  if (stagedPhotos.length === 0)   missing.push(t("missingPhoto"));
+  const btn = document.getElementById("submitBtn");
+  if (missing.length === 0) {
+    btn.disabled = false;
+    btn.textContent = t("submit");
+  } else {
+    btn.disabled = true;
+    btn.textContent = t("submitMissing", missing.join(" · "));
+  }
 }
 
 function clearForm() {
@@ -974,11 +967,9 @@ function clearForm() {
 
 function todayIso() { return new Date().toISOString().slice(0, 10); }
 
-// ============================================================
-// Submit → queue
-// ============================================================
 document.getElementById("submitBtn").addEventListener("click", async () => {
-  const inspVal = inspPicker.get(); // "true" | "false" | null
+  if (document.getElementById("submitBtn").disabled) return;
+  const inspVal = inspPicker.get();
   const sharedTags = tagPicker.get();
   const workDate = document.getElementById("workDate").value || todayIso();
   const sub = {
@@ -1011,8 +1002,8 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
     })),
     parentIdServer: null,
   };
+  LOG("submit.click", "core=" + sub.parentFields.core, "gw=" + sub.parentFields.green_wall, "photos=" + sub.photos.length);
 
-  // Geolocation, non-blocking
   try {
     const pos = await new Promise((res, rej) => {
       if (!navigator.geolocation) return rej(new Error("no geo"));
@@ -1022,7 +1013,14 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
     sub.parentFields.capture_lng = pos.coords.longitude;
   } catch (_e) { /* skip silently */ }
 
-  await dbPut(sub);
+  try {
+    await dbPut(sub);
+    LOG("submit.saved", "id=" + sub.id.slice(0,8));
+  } catch (e) {
+    LOG("err.submit.dbPut", e.message || String(e));
+    toast("Save failed: " + (e.message || e), true);
+    return;
+  }
   clearForm();
   toast(t("submitSaved", sub.photos.length));
   renderQueueBadge();
@@ -1041,6 +1039,7 @@ async function requestBackgroundSync() {
 // Drain loop
 // ============================================================
 let _draining = false;
+let lastSyncAt = null;
 
 async function drainQueue() {
   if (_draining) return;
@@ -1054,11 +1053,13 @@ async function drainQueue() {
       if (sub.attempts >= MAX_ATTEMPTS) continue;
       try {
         await uploadSubmission(sub);
+        lastSyncAt = new Date();
       } catch (err) {
         sub.attempts++;
         sub.status = "error";
         sub.lastError = String(err.message || err);
         await dbPut(sub);
+        LOG("err.upload", "id=" + sub.id.slice(0,8), "attempt=" + sub.attempts, sub.lastError);
         renderQueueBadge(); renderQueueSheet();
         break;
       }
@@ -1071,6 +1072,7 @@ async function drainQueue() {
 
 async function uploadSubmission(sub) {
   sub.status = "uploading"; await dbPut(sub); renderQueueSheet();
+  LOG("upload.start", "id=" + sub.id.slice(0,8));
 
   if (!sub.parentIdServer) {
     const r = await fnCall({ mode: "createParent", parentFields: sub.parentFields });
@@ -1081,7 +1083,6 @@ async function uploadSubmission(sub) {
 
   for (const photo of sub.photos) {
     if (photo.uploaded) continue;
-    // Photo's own tag set = shared (sub.tags) ∪ photo.extraTags
     const mergedTags = Array.from(new Set([...(sub.tags || []), ...(photo.extraTags || [])]));
 
     if (!photo.photoIdServer) {
@@ -1135,7 +1136,8 @@ async function uploadSubmission(sub) {
   sub.status = "done";
   sub.completedAt = new Date().toISOString();
   await dbPut(sub);
-  setTimeout(() => { dbDel(sub.id).then(renderQueueSheet).then(renderQueueBadge); }, 5 * 60 * 1000);
+  LOG("upload.ok", "id=" + sub.id.slice(0,8));
+  // No auto-purge: done submissions persist in IDB until user clears them.
 }
 
 async function fnCall(body) {
@@ -1158,38 +1160,51 @@ async function fnCall(body) {
 async function renderQueueBadge() {
   const all = await dbAll();
   const badge = document.getElementById("queueBadge");
-  const pending = all.filter(s => s.status !== "done").length;
+  const main = document.getElementById("queueBadgeMain");
+  const sub = document.getElementById("queueBadgeSub");
   const errored = all.filter(s => s.status === "error").length;
-  const photosLeft = all.filter(s => s.status !== "done")
+  const pendingPhotos = all.filter(s => s.status !== "done")
     .reduce((n, s) => n + s.photos.filter(p => !p.uploaded).length, 0);
-  badge.classList.toggle("has", pending > 0 && errored === 0);
+  const doneCount = all.filter(s => s.status === "done").length;
+  badge.classList.toggle("has", pendingPhotos > 0 && errored === 0);
   badge.classList.toggle("error", errored > 0);
-  if (errored > 0) badge.textContent = t("queueErrors", errored);
-  else if (pending > 0) badge.textContent = t("queuePending", photosLeft);
-  else badge.textContent = navigator.onLine ? t("queueAllSynced") : t("queueOffline");
+  if (errored > 0) {
+    main.textContent = "⚠️ " + t("queueErrors", errored);
+    sub.textContent = pendingPhotos > 0 ? t("queuePending", pendingPhotos) : "";
+  } else if (pendingPhotos > 0) {
+    main.textContent = "⤴︎ " + t("queuePending", pendingPhotos);
+    sub.textContent = navigator.onLine ? "" : t("queueOffline");
+  } else {
+    main.textContent = navigator.onLine ? t("queueAllSynced") : t("queueOffline");
+    sub.textContent = lastSyncAt ? t("queueLastSync", lastSyncAt.toLocaleTimeString().slice(0,5)) : (doneCount > 0 ? `${doneCount} ✓` : "");
+  }
 }
 
 async function renderQueueSheet() {
   const all = (await dbAll()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const list = document.getElementById("queueList");
+  const sub = document.getElementById("queueSub");
+  const pending = all.filter(s => s.status !== "done").length;
+  const done = all.filter(s => s.status === "done").length;
+  sub.textContent = t("queueSub", pending, done);
   if (all.length === 0) { list.innerHTML = `<div class="empty">${t("queueEmpty")}</div>`; return; }
   list.innerHTML = "";
-  all.forEach(sub => {
+  all.forEach(s => {
     const div = document.createElement("div");
     div.className = "qItem";
-    const photoSummary = `${sub.photos.filter(p => p.uploaded).length}/${sub.photos.length} files`;
-    const meta = [sub.parentFields.core, sub.parentFields.green_wall, sub.parentFields.level, sub.parentFields.type].filter(Boolean).join(" · ");
+    const photoSummary = `${s.photos.filter(p => p.uploaded).length}/${s.photos.length} files`;
+    const meta = [s.parentFields.core, s.parentFields.green_wall, s.parentFields.level, s.parentFields.type].filter(Boolean).join(" · ");
     div.innerHTML = `
       <div class="qHead">
         <span>${escapeHtml(meta || "—")}</span>
-        <span class="status ${sub.status}">${sub.status}</span>
+        <span class="status ${s.status}">${s.status}</span>
       </div>
-      <div>${photoSummary} · ${new Date(sub.createdAt).toLocaleString()}</div>
-      ${sub.lastError ? `<div class="err">${escapeHtml(sub.lastError)}</div>` : ""}
+      <div>${photoSummary} · ${new Date(s.createdAt).toLocaleString()}</div>
+      ${s.lastError ? `<div class="err">${escapeHtml(s.lastError)}</div>` : ""}
       <div class="actions">
-        ${sub.status === "error" ? `<button data-act="retry" data-id="${sub.id}">${t("queueRetry")}</button>` : ""}
-        ${sub.status === "done"  ? `<button data-act="del"   data-id="${sub.id}">${t("queueClear")}</button>` : ""}
-        ${sub.status !== "uploading" && sub.status !== "done" ? `<button class="danger" data-act="del" data-id="${sub.id}">${t("queueDiscard")}</button>` : ""}
+        ${s.status === "error" ? `<button data-act="retry" data-id="${s.id}">${t("queueRetry")}</button>` : ""}
+        ${s.status === "done"  ? `<button data-act="del"   data-id="${s.id}">${t("queueClear")}</button>` : ""}
+        ${s.status !== "uploading" && s.status !== "done" ? `<button class="danger" data-act="del" data-id="${s.id}">${t("queueDiscard")}</button>` : ""}
       </div>
     `;
     list.appendChild(div);
@@ -1198,8 +1213,8 @@ async function renderQueueSheet() {
     b.addEventListener("click", async () => {
       const id = b.dataset.id;
       if (b.dataset.act === "retry") {
-        const sub = await dbGet(id);
-        if (sub) { sub.status = "queued"; sub.lastError = null; await dbPut(sub); drainQueue(); }
+        const s = await dbGet(id);
+        if (s) { s.status = "queued"; s.lastError = null; await dbPut(s); drainQueue(); }
       } else if (b.dataset.act === "del") {
         await dbDel(id); renderQueueSheet(); renderQueueBadge();
       }
@@ -1214,7 +1229,97 @@ document.getElementById("queueBadge").addEventListener("click", () => {
 document.getElementById("queueClose").addEventListener("click", () => {
   document.getElementById("queueOverlay").classList.remove("show");
 });
+document.getElementById("qClearDoneBtn").addEventListener("click", async () => {
+  const all = await dbAll();
+  for (const s of all) if (s.status === "done") await dbDel(s.id);
+  renderQueueSheet(); renderQueueBadge();
+});
 
+// ============================================================
+// Export pending queue → iOS Files (emergency safety net)
+// ============================================================
+async function exportQueuedFiles() {
+  const all = await dbAll();
+  const files = [];
+  for (const s of all) {
+    if (s.status === "done") continue;
+    for (const p of s.photos) {
+      if (p.uploaded || !p.blob) continue;
+      const ext = p.mediaKind === "video" ? ".mp4" : ".jpg";
+      const tag = [s.parentFields.green_wall, s.parentFields.level, s.parentFields.core].filter(Boolean).join("-") || "RIV";
+      const name = `${tag}_${s.id.slice(0,6)}_${p.id.slice(0,6)}${ext}`;
+      files.push(new File([p.blob], name, { type: p.mime || "application/octet-stream" }));
+    }
+  }
+  LOG("export.start", "files=" + files.length);
+  if (files.length === 0) { toast(t("queueExportEmpty")); return; }
+  if (navigator.canShare && navigator.canShare({ files })) {
+    try {
+      await navigator.share({ files, title: "Riviera queue export" });
+      toast(t("queueExportShared"));
+      LOG("export.shared", "files=" + files.length);
+      return;
+    } catch (e) {
+      if (e.name !== "AbortError") LOG("err.export.share", e.message || String(e));
+    }
+  }
+  // Fallback: sequential downloads
+  let n = 0;
+  for (const f of files) {
+    const url = URL.createObjectURL(f);
+    const a = document.createElement("a");
+    a.href = url; a.download = f.name;
+    document.body.appendChild(a); a.click();
+    n++;
+    await new Promise(r => setTimeout(r, 350));
+    URL.revokeObjectURL(url); a.remove();
+  }
+  toast(t("queueExportDownloaded", n));
+  LOG("export.downloaded", "files=" + n);
+}
+document.getElementById("qExportBtn").addEventListener("click", exportQueuedFiles);
+
+// ============================================================
+// Debug log overlay
+// ============================================================
+function renderDebugList() {
+  const list = document.getElementById("debugList");
+  const sub = document.getElementById("debugSub");
+  sub.textContent = `${DEBUG_LOG.length} entries`;
+  if (DEBUG_LOG.length === 0) { list.innerHTML = `<div class="empty">empty</div>`; return; }
+  list.innerHTML = DEBUG_LOG.slice().reverse().map(e =>
+    `<div class="row${e.isErr ? " err" : ""}"><span class="t">${e.ts}</span>${escapeHtml(e.text)}</div>`
+  ).join("");
+}
+document.getElementById("debugBtn").addEventListener("click", () => {
+  document.getElementById("debugOverlay").classList.add("show");
+  renderDebugList();
+});
+document.getElementById("debugClose").addEventListener("click", () => {
+  document.getElementById("debugOverlay").classList.remove("show");
+});
+document.getElementById("debugClearBtn").addEventListener("click", () => {
+  DEBUG_LOG.length = 0;
+  renderDebugList();
+});
+document.getElementById("debugCopyBtn").addEventListener("click", async () => {
+  const text = DEBUG_LOG.map(e => `${e.ts} ${e.text}`).join("\n");
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(t("debugCopied"));
+  } catch (_e) {
+    // Fallback: select+copy via a textarea
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); toast(t("debugCopied")); } catch (e2) { toast("copy failed", true); }
+    ta.remove();
+  }
+});
+
+// ============================================================
+// Misc helpers
+// ============================================================
 function toast(msg, isError = false) {
   const el = document.getElementById("toast");
   el.textContent = msg;
@@ -1223,7 +1328,6 @@ function toast(msg, isError = false) {
   clearTimeout(toast._t);
   toast._t = setTimeout(() => el.classList.remove("show"), 3500);
 }
-
 function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
@@ -1236,38 +1340,33 @@ function updateNet() {
   renderQueueBadge();
   if (navigator.onLine) drainQueue();
 }
-window.addEventListener("online",  updateNet);
-window.addEventListener("offline", updateNet);
-document.addEventListener("visibilitychange", () => { if (!document.hidden && navigator.onLine) drainQueue(); });
+window.addEventListener("online",  () => { LOG("net.online"); updateNet(); });
+window.addEventListener("offline", () => { LOG("net.offline"); updateNet(); });
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && navigator.onLine) drainQueue();
+});
 
-// Display captain identity
 (function initCaptainName(){
   const stored = getCaptainEmail();
   document.getElementById("captainName").textContent = stored || ("captain ••" + CAPTAIN_TOKEN.slice(-4));
 })();
 
 // Service worker — intentionally NOT registered. The previous SW versions
-// trapped iOS PWA installs on stale cached HTML. We register sw.js ONCE more
-// only so the self-destruct SW takes over from the old one and unregisters
-// itself, then immediately tear it down here too. Future loads run pure
-// network-first; IndexedDB still provides offline-write resilience.
+// trapped iOS PWA installs on stale cached HTML. We only register sw.js
+// when an old SW is detected, so the self-destruct one takes over and
+// unregisters itself. Future loads run network-first; IndexedDB still
+// provides offline-write resilience for queued submissions.
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.getRegistrations().then(async (regs) => {
-    if (regs.length === 0) {
-      // Fresh install — nothing to clean up. Skip registering anything.
-      return;
-    }
-    // Old SW present: register the self-destruct, let it activate, then bail.
+    if (regs.length === 0) return;
     try { await navigator.serviceWorker.register("sw.js"); } catch (_e) {}
   }).catch(() => {});
-  // Belt-and-suspenders cache nuke for cases where the SW unregister doesn't
-  // automatically clear the storage bucket on iOS.
   if (window.caches && caches.keys) {
     caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {});
   }
 }
 
-// Language toggle wiring
+// Language toggle
 document.querySelectorAll(".langBtn").forEach(b =>
   b.addEventListener("click", () => setLang(b.dataset.lang)));
 
@@ -1276,6 +1375,7 @@ applyI18n();
 rebuildPills();
 document.getElementById("workDate").value = todayIso();
 document.querySelectorAll(".langBtn").forEach(b => b.classList.toggle("on", b.dataset.lang === LANG));
+onFormChange();
 updateNet();
 renderQueueBadge();
 drainQueue();
