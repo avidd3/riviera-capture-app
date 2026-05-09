@@ -118,6 +118,8 @@
     <div>URL: <span id="diagUrl">—</span></div>
     <div>Token in URL: <span id="diagUrlToken">—</span></div>
     <div>Token in storage: <span id="diagStoreToken">—</span></div>
+    <div>Token in cookie: <span id="diagCookieToken">—</span></div>
+    <div>Standalone PWA: <span id="diagStandalone">—</span></div>
   </div>
   <div style="margin-top:18px;font-size:13px">
     <input type="text" id="manualToken" data-i18n-attr="placeholder:needTokenInput" placeholder="Or paste your token here" style="width:100%;padding:10px;background:#0d3b29;color:#f1f3f0;border:1px solid #2a7c54;border-radius:8px;font-family:ui-monospace,Menlo,monospace;font-size:13px">
@@ -441,11 +443,24 @@ const TAGS = [
 // ============================================================
 // Captain identity
 // ============================================================
+// Cookie helpers — needed because iOS Safari and standalone PWAs maintain
+// SEPARATE localStorage. Cookies survive the Safari ↔ PWA boundary, so we
+// mirror the token into both stores. Long expiry (1 year) since captain
+// tokens are stable.
+function setCookie(name, value, days) {
+  const exp = new Date(Date.now() + days * 86400000).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${exp}; path=/; SameSite=Lax; Secure`;
+}
+function getCookie(name) {
+  const m = document.cookie.match(new RegExp("(?:^|;\\s*)" + name + "=([^;]+)"));
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
 function getCaptainToken() {
   // Token can arrive in either ?t=... (query) or #t=... (fragment).
-  // Fragment-form is preferred for iOS PWA install: when the user runs
-  // "Add to Home Screen", the manifest's start_url drops the query string
-  // but the fragment survives, so the home-screen launch still has the token.
+  // Whichever lane it comes through, mirror it to BOTH localStorage and a
+  // cookie so the home-screen PWA (different storage context on iOS) can
+  // still read it back when launched from the icon.
   let t = null;
   try {
     const url = new URL(location.href);
@@ -456,10 +471,16 @@ function getCaptainToken() {
     }
   } catch (_e) { /* ignore */ }
   if (t && t.length >= 16) {
-    localStorage.setItem("riviera.captainToken", t);
+    try { localStorage.setItem("riviera.captainToken", t); } catch (_e) {}
+    setCookie("riviera.captainToken", t, 365);
     return t;
   }
-  return localStorage.getItem("riviera.captainToken");
+  // Fallback chain: localStorage → cookie. Backfill the missing one.
+  const fromLs = (() => { try { return localStorage.getItem("riviera.captainToken"); } catch (_e) { return null; } })();
+  const fromCk = getCookie("riviera.captainToken");
+  if (fromLs && !fromCk) setCookie("riviera.captainToken", fromLs, 365);
+  if (fromCk && !fromLs) { try { localStorage.setItem("riviera.captainToken", fromCk); } catch (_e) {} }
+  return fromLs || fromCk;
 }
 function getCaptainEmail() { return localStorage.getItem("riviera.captainEmail") || ""; }
 
@@ -475,6 +496,11 @@ if (!CAPTAIN_TOKEN) {
       : "(none)";
     document.getElementById("diagStoreToken").textContent =
       localStorage.getItem("riviera.captainToken") || "(none)";
+    document.getElementById("diagCookieToken").textContent =
+      getCookie("riviera.captainToken") || "(none)";
+    const standalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches)
+      || window.navigator.standalone === true;
+    document.getElementById("diagStandalone").textContent = standalone ? "yes (home-screen launch)" : "no (Safari tab)";
   } catch (_e) {}
   document.getElementById("manualTokenBtn").addEventListener("click", () => {
     const v = document.getElementById("manualToken").value.trim();
