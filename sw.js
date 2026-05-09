@@ -10,7 +10,7 @@
 // hit the network. We let them fail naturally when offline and the page handles
 // queueing locally.
 
-const CACHE = "riviera-capture-v1";
+const CACHE = "riviera-capture-v2";
 const SHELL = [
   "./",
   "./index.html",
