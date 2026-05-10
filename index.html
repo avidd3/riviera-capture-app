@@ -44,6 +44,19 @@
   .pill.tag.issue.on{background:#7a1f1f;border-color:#a02f2f}
   input[type=text],input[type=date],textarea{width:100%;background:#0d3b29;color:#f1f3f0;border:1px solid #2a7c54;border-radius:8px;padding:12px;font-size:16px;font-family:inherit}
   textarea{resize:vertical;min-height:80px}
+  /* Auto-info row (Core + Mast Climber under GW; Modules under Levels) */
+  .autoInfo{margin-top:10px;padding:10px 12px;background:#0d3b29;border:1px solid #1f5a3f;border-radius:8px;font-size:13px;color:#d3e6db;display:flex;flex-wrap:wrap;gap:14px}
+  .autoInfo.empty{display:none}
+  .autoInfo .item{display:flex;flex-direction:column;line-height:1.2}
+  .autoInfo .label{color:#7fb89c;text-transform:uppercase;font-size:9px;letter-spacing:.06em;font-weight:600;margin-bottom:3px}
+  .autoInfo .val{color:#fff;font-weight:600;font-variant-numeric:tabular-nums}
+  .autoInfo .val.modules{display:flex;flex-wrap:wrap;gap:4px}
+  .autoInfo .modChip{background:#1f5a3f;border:1px solid #2a7c54;padding:2px 7px;border-radius:4px;font-size:12px}
+  /* Levels grid */
+  .levelGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+  .lvlPill{background:#0d3b29;border:1px solid #2a7c54;color:#d3e6db;padding:8px 4px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;text-align:center;min-height:38px;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+  .lvlPill.on{background:#2a7c54;color:#fff;border-color:#3da774}
+  /* Photos */
   .captureGroup{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
   .captureBtn{background:#2a7c54;color:#fff;border:none;border-radius:10px;padding:14px 6px;font-size:13px;font-weight:600;cursor:pointer;line-height:1.2}
   .captureBtn .ico{display:block;font-size:22px;margin-bottom:4px}
@@ -90,9 +103,7 @@
   .empty{text-align:center;color:#7fb89c;padding:24px;font-size:13px}
   .needToken{padding:32px 16px;text-align:center}
   .needToken h2{color:#ff9090}
-  label.muted{display:block;font-size:12px;color:#7fb89c;margin-bottom:6px}
   .row{display:flex;gap:8px}
-  .row > *{flex:1}
   .net{display:inline-block;width:8px;height:8px;border-radius:50%;background:#3da774;margin-right:6px;vertical-align:middle}
   .net.off{background:#a05a00}
   /* Per-photo editor */
@@ -101,8 +112,6 @@
   .peField{margin-bottom:14px}
   .peField .lbl{font-size:11px;color:#7fb89c;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;font-weight:600;display:flex;justify-content:space-between;align-items:baseline}
   .peField .lbl .sub{font-size:10px;color:#5e8c75;text-transform:none;letter-spacing:0;font-weight:400}
-  .peSharedTag{display:inline-flex;align-items:center;gap:4px;background:#0d3b29;border:1px solid #1f5a3f;color:#7fb89c;padding:5px 10px;border-radius:999px;font-size:12px;margin:0 4px 4px 0;opacity:.7}
-  .peSharedTag::before{content:"🔒";font-size:9px}
   .peActions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
   .peActions button{flex:1;min-width:120px;padding:12px;font-size:14px;font-weight:600;border:none;border-radius:8px;cursor:pointer}
   .peRemove{background:#5a1f1f;color:#fff}
@@ -155,48 +164,53 @@
 
 <main>
 
-<section>
-  <h2 data-i18n="sectionCore">Core</h2>
-  <div class="pillrow" id="coreRow"></div>
-</section>
-
+<!-- 1. Green Wall (top, single-select) -->
 <section>
   <h2 data-i18n="sectionGW">Green Wall</h2>
   <div class="pillrow" id="gwRow"></div>
+  <div class="autoInfo empty" id="gwAutoInfo"></div>
 </section>
 
+<!-- 2. Levels (multi-select) -->
 <section>
-  <h2 data-i18n="sectionLevel">Level</h2>
-  <input type="text" id="level" data-i18n-attr="placeholder:levelPlaceholder" placeholder="L01, L02, P1, RDC…" autocomplete="off" autocapitalize="characters">
+  <h2><span data-i18n="sectionLevel">Levels</span> <span class="hint" data-i18n="levelMultiHint">multi-select</span></h2>
+  <div class="levelGrid" id="levelGrid"></div>
+  <div class="autoInfo empty" id="moduleAutoInfo"></div>
 </section>
 
+<!-- 3. Type -->
 <section>
-  <h2 data-i18n="sectionType">Type</h2>
+  <h2><span data-i18n="sectionType">Type</span> <span class="hint" data-i18n="typeHint">for WIR</span></h2>
   <div class="pillrow" id="typeRow"></div>
 </section>
 
+<!-- 4. Inspection ready -->
 <section>
   <h2 data-i18n="sectionInsp">Inspection ready</h2>
   <div class="pillrow" id="inspRow"></div>
 </section>
 
+<!-- 5. Tags (default for new photos, editable per-photo) -->
 <section>
-  <h2><span data-i18n="sectionDate">Work date</span> <span class="hint" data-i18n="sectionDateHint">defaults to today</span></h2>
-  <input type="date" id="workDate">
+  <h2><span data-i18n="sectionTags">Tags</span> <span class="hint" data-i18n="tagsHint">default for new photos · editable per-photo</span></h2>
+  <div class="pillrow" id="tagRow"></div>
 </section>
 
+<!-- 6. Notes -->
 <section>
   <h2 data-i18n="sectionNotes">Notes</h2>
   <textarea id="notes" data-i18n-attr="placeholder:notesPlaceholder" placeholder="Optional comment about this submission"></textarea>
 </section>
 
+<!-- 7. Work date -->
 <section>
-  <h2 data-i18n="sectionTags">Tags (apply to all photos)</h2>
-  <div class="pillrow" id="tagRow"></div>
+  <h2><span data-i18n="sectionDate">Work date</span> <span class="hint" data-i18n="sectionDateHint">defaults to today</span></h2>
+  <input type="date" id="workDate">
 </section>
 
+<!-- 8. Photos & Videos (bottom, expanding) -->
 <section>
-  <h2><span data-i18n="sectionPhotos">Photos &amp; Videos</span> <span class="hint" data-i18n="photosTapHint">tap a thumbnail to add description / extra tags</span></h2>
+  <h2><span data-i18n="sectionPhotos">Photos &amp; Videos</span> <span class="hint" data-i18n="photosTapHint">tap a thumbnail to edit</span></h2>
   <div class="captureGroup">
     <button type="button" class="captureBtn" id="capPhotoBtn"><span class="ico">📷</span><span data-i18n="capturePhoto">Photo</span></button>
     <button type="button" class="captureBtn" id="capVideoBtn"><span class="ico">🎥</span><span data-i18n="captureVideo">Video</span></button>
@@ -239,12 +253,8 @@
       <textarea id="peDesc" data-i18n-attr="placeholder:photoDescPlaceholder" placeholder="What's in this photo?"></textarea>
     </div>
     <div class="peField">
-      <div class="lbl"><span data-i18n="photoSharedTags">Shared tags</span><span class="sub" data-i18n="photoSharedTagsHint">from submission</span></div>
-      <div id="peSharedTags"></div>
-    </div>
-    <div class="peField">
-      <div class="lbl"><span data-i18n="photoExtraTags">Extra tags for this photo</span><span class="sub" data-i18n="optional">optional</span></div>
-      <div class="pillrow" id="peExtraTags"></div>
+      <div class="lbl"><span data-i18n="photoTagsLabel">Tags for this file</span><span class="sub" data-i18n="photoTagsHint">add or remove freely</span></div>
+      <div class="pillrow" id="peTagsRow"></div>
     </div>
     <div class="peActions">
       <button type="button" class="peRemove" id="peRemoveBtn" data-i18n="photoRemove">🗑 Remove</button>
@@ -275,25 +285,25 @@
 const I18N = {
   fr: {
     headerTitle: "Capture Riviera",
-    sectionCore: "Cœur",
     sectionGW: "Mur végétal",
-    sectionLevel: "Niveau",
-    levelPlaceholder: "L01, L02, P1, RDC…",
+    sectionLevel: "Niveaux",
+    levelMultiHint: "sélection multiple",
     sectionType: "Type",
+    typeHint: "pour WIR",
     sectionInsp: "Prêt pour inspection",
     sectionDate: "Date du travail",
     sectionDateHint: "aujourd'hui par défaut",
     sectionNotes: "Notes",
     notesPlaceholder: "Commentaire optionnel sur cette saisie",
-    sectionTags: "Étiquettes (appliquées à toutes les photos)",
+    sectionTags: "Étiquettes",
+    tagsHint: "par défaut pour les nouvelles photos · modifiable par photo",
     sectionPhotos: "Photos & Vidéos",
-    photosTapHint: "appuyer sur une vignette pour description / étiquettes",
+    photosTapHint: "appuyer sur une vignette pour modifier",
     capturePhoto: "Photo",
     captureVideo: "Vidéo",
     captureUpload: "Depuis Photos",
     submit: "Enregistrer",
     submitMissing: m => "Manque : " + m,
-    missingCore: "Cœur",
     missingGW: "Mur végétal",
     missingPhoto: "1 photo",
     submitSaved: n => `Enregistré. ${n} fichier${n===1?"":"s"} en file.`,
@@ -319,15 +329,17 @@ const I18N = {
     needTokenBtn: "Utiliser le jeton",
     inspNotReady: "Pas prêt",
     inspReady: "Prêt",
-    typeElement: "Élément",
+    typeInstallation: "Installation",
     typeWorkZone: "Zone de travail",
     typeInventory: "Inventaire",
+    autoInfoCore: "Cœur",
+    autoInfoMC: "Mât",
+    autoInfoModules: "Module(s)",
     photoEditTitle: "Détails du fichier",
     photoDescLabel: "Description",
     photoDescPlaceholder: "Décris ce qu'on voit",
-    photoSharedTags: "Étiquettes partagées",
-    photoSharedTagsHint: "depuis la saisie",
-    photoExtraTags: "Étiquettes spécifiques à ce fichier",
+    photoTagsLabel: "Étiquettes pour ce fichier",
+    photoTagsHint: "ajouter ou retirer librement",
     photoRemove: "🗑 Retirer",
     photoEditDone: "Terminé",
     optional: "optionnel",
@@ -340,25 +352,25 @@ const I18N = {
   },
   en: {
     headerTitle: "Riviera Capture",
-    sectionCore: "Core",
     sectionGW: "Green Wall",
-    sectionLevel: "Level",
-    levelPlaceholder: "L01, L02, P1, RDC…",
+    sectionLevel: "Levels",
+    levelMultiHint: "multi-select",
     sectionType: "Type",
+    typeHint: "for WIR",
     sectionInsp: "Inspection ready",
     sectionDate: "Work date",
     sectionDateHint: "today by default",
     sectionNotes: "Notes",
     notesPlaceholder: "Optional comment about this submission",
-    sectionTags: "Tags (applied to every photo)",
+    sectionTags: "Tags",
+    tagsHint: "default for new photos · editable per-photo",
     sectionPhotos: "Photos & Videos",
-    photosTapHint: "tap a thumbnail to add description / extra tags",
+    photosTapHint: "tap a thumbnail to edit",
     capturePhoto: "Photo",
     captureVideo: "Video",
     captureUpload: "From Photos",
     submit: "Save submission",
     submitMissing: m => "Need: " + m,
-    missingCore: "Core",
     missingGW: "Green Wall",
     missingPhoto: "1 photo",
     submitSaved: n => `Saved. ${n} file${n===1?"":"s"} queued.`,
@@ -384,15 +396,17 @@ const I18N = {
     needTokenBtn: "Use token",
     inspNotReady: "Not ready",
     inspReady: "Ready",
-    typeElement: "Element",
+    typeInstallation: "Installation",
     typeWorkZone: "Work zone",
     typeInventory: "Inventory",
+    autoInfoCore: "Core",
+    autoInfoMC: "Mast Climber",
+    autoInfoModules: "Module(s)",
     photoEditTitle: "File details",
     photoDescLabel: "Description",
     photoDescPlaceholder: "What's in this photo?",
-    photoSharedTags: "Shared tags",
-    photoSharedTagsHint: "from submission",
-    photoExtraTags: "Extra tags for this file",
+    photoTagsLabel: "Tags for this file",
+    photoTagsHint: "add or remove freely",
     photoRemove: "🗑 Remove",
     photoEditDone: "Done",
     optional: "optional",
@@ -435,6 +449,7 @@ function setLang(l) {
   document.querySelectorAll(".langBtn").forEach(b => b.classList.toggle("on", b.dataset.lang === l));
   applyI18n();
   rebuildPills();
+  renderAutoInfo();
   renderQueueBadge();
   renderQueueSheet();
   renderThumbs();
@@ -442,7 +457,7 @@ function setLang(l) {
 }
 
 // ============================================================
-// Debug log (in-memory, viewable from header 🐞 button)
+// Debug log
 // ============================================================
 const DEBUG_LOG = [];
 const DEBUG_LOG_MAX = 250;
@@ -458,7 +473,6 @@ function LOG(msg, ...extra) {
   DEBUG_LOG.push({ ts, text, isErr: msg.startsWith("err.") });
   if (DEBUG_LOG.length > DEBUG_LOG_MAX) DEBUG_LOG.shift();
   try { console.log("[riv]", ts, text); } catch (_e) {}
-  // If the debug overlay is open, refresh it live
   const ov = document.getElementById("debugOverlay");
   if (ov && ov.classList.contains("show")) renderDebugList();
 }
@@ -471,19 +485,75 @@ window.addEventListener("unhandledrejection", e => {
 // ============================================================
 // Config
 // ============================================================
-// Project: Riviera Tower - Elleniko (aqcbovokukjafftniunh, eu-central-1)
 const SUPABASE_URL = "https://aqcbovokukjafftniunh.supabase.co";
 const FUNCTION_URL = SUPABASE_URL + "/functions/v1/riviera-write";
 const DB_NAME = "riviera-capture";
 const DB_VERSION = 1;
 const MAX_ATTEMPTS = 8;
 
-const CORES = ["A", "B"];
 const GWS = ["GW1", "GW2", "GW3", "GW4"];
+const GW_DEFAULTS = {
+  GW1: { core: "B", mast_climber: "MC7"  },
+  GW2: { core: "B", mast_climber: "MC16" },
+  GW3: { core: "A", mast_climber: "MC16" },
+  GW4: { core: "A", mast_climber: "MC15" }
+};
+const GW_DIRECTION = { GW1: "NE", GW2: "NW", GW3: "SW", GW4: "SE" };
 
-// Type values: stored canonically in French (matches existing DB rows).
+// Levels — sourced from Le Terrain variables list (2026-05-09).
+const LEVELS = (() => {
+  const out = ["LO"];
+  for (let i = 0; i <= 50; i++) out.push("L" + String(i).padStart(2, "0"));
+  out.push("P1", "P2", "C06");
+  return out;
+})();
+
+// Module-name lookup. Pairing rules:
+//   GW1, GW4: odd-even pairs (01-02, 03-04, …, 49-50) + "O-00" at the bottom.
+//   GW2, GW3: even-odd pairs (00-01, 02-03, …, 48-49) + isolated "50" at top + "O" at bottom.
+function moduleNameFor(gw, level) {
+  if (!gw || !level) return null;
+  const dir = GW_DIRECTION[gw];
+  if (!dir) return null;
+  if (level === "LO") {
+    if (gw === "GW1" || gw === "GW4") return `${dir} | O-00`;
+    if (gw === "GW2" || gw === "GW3") return `${dir} | O`;
+  }
+  if (level === "L00") {
+    if (gw === "GW1" || gw === "GW4") return `${dir} | O-00`;
+    if (gw === "GW2" || gw === "GW3") return `${dir} | 00-01`;
+  }
+  const m = level.match(/^L(\d+)$/);
+  if (!m) return null; // P1, P2, C06 don't map to a module
+  const n = parseInt(m[1], 10);
+  if (gw === "GW1" || gw === "GW4") {
+    if (n < 1 || n > 50) return null;
+    const lower = n % 2 === 1 ? n : n - 1;
+    const upper = lower + 1;
+    return `${dir} | ${String(lower).padStart(2,"0")}-${String(upper).padStart(2,"0")}`;
+  }
+  if (gw === "GW2" || gw === "GW3") {
+    if (n === 50) return `${dir} | 50`;
+    if (n < 0 || n > 49) return null;
+    const lower = n % 2 === 0 ? n : n - 1;
+    const upper = lower + 1;
+    return `${dir} | ${String(lower).padStart(2,"0")}-${String(upper).padStart(2,"0")}`;
+  }
+  return null;
+}
+function modulesFor(gw, levels) {
+  if (!gw || !levels?.length) return [];
+  const seen = new Set();
+  const out = [];
+  for (const l of levels) {
+    const m = moduleNameFor(gw, l);
+    if (m && !seen.has(m)) { seen.add(m); out.push(m); }
+  }
+  return out;
+}
+
 const TYPES = [
-  { value: "Élément",         labelKey: "typeElement" },
+  { value: "Installation",    labelKey: "typeInstallation" },
   { value: "Zone de travail", labelKey: "typeWorkZone" },
   { value: "Inventaire",      labelKey: "typeInventory" }
 ];
@@ -637,7 +707,8 @@ function uuid() {
   });
 }
 
-function buildPills(rowId, options, allowNone = false) {
+// Single-select pill row.
+function buildPills(rowId, options, allowNone = false, onChange) {
   const row = document.getElementById(rowId);
   row.innerHTML = "";
   let selected = null;
@@ -650,13 +721,13 @@ function buildPills(rowId, options, allowNone = false) {
     b.className = "pill";
     b.textContent = labelOf(opt);
     b.dataset.val = v;
-    b.dataset.labelKey = typeof opt === "string" ? "" : opt.labelKey;
     b.addEventListener("click", () => {
       if (selected === v && allowNone) { selected = null; b.classList.remove("on"); }
       else {
         selected = v;
         row.querySelectorAll(".pill").forEach(p => p.classList.toggle("on", p.dataset.val === v));
       }
+      if (onChange) onChange(selected);
       onFormChange();
     });
     row.appendChild(b);
@@ -674,6 +745,7 @@ function buildPills(rowId, options, allowNone = false) {
   };
 }
 
+// Multi-select tag pill row.
 function buildTagPills(rowId) {
   const row = document.getElementById(rowId);
   row.innerHTML = "";
@@ -700,20 +772,54 @@ function buildTagPills(rowId) {
   };
 }
 
-let corePicker, gwPicker, typePicker, inspPicker, tagPicker;
+// Multi-select level grid (compact pills, multi).
+function buildLevelGrid(gridId, levels) {
+  const grid = document.getElementById(gridId);
+  grid.innerHTML = "";
+  const selected = new Set();
+  levels.forEach(lvl => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "lvlPill";
+    b.textContent = lvl;
+    b.dataset.val = lvl;
+    b.addEventListener("click", () => {
+      if (selected.has(lvl)) { selected.delete(lvl); b.classList.remove("on"); }
+      else { selected.add(lvl); b.classList.add("on"); }
+      renderAutoInfo();
+      onFormChange();
+    });
+    grid.appendChild(b);
+  });
+  return {
+    get: () => Array.from(selected),
+    set: (arr) => {
+      selected.clear(); (arr || []).forEach(l => selected.add(l));
+      grid.querySelectorAll(".lvlPill").forEach(p => p.classList.toggle("on", selected.has(p.dataset.val)));
+    },
+    clear: () => {
+      selected.clear();
+      grid.querySelectorAll(".lvlPill").forEach(p => p.classList.remove("on"));
+    }
+  };
+}
+
+let gwPicker, levelPicker, typePicker, inspPicker, tagPicker;
 function rebuildPills() {
   const prev = {
-    core: corePicker?.get(), gw: gwPicker?.get(),
-    type: typePicker?.get(), insp: inspPicker?.get(),
-    tags: tagPicker ? tagPicker.get() : []
+    gw: gwPicker?.get(),
+    levels: levelPicker?.get() || [],
+    type: typePicker?.get(),
+    insp: inspPicker?.get(),
+    tags: tagPicker?.get() || []
   };
-  corePicker = buildPills("coreRow", CORES, true);
-  gwPicker   = buildPills("gwRow",   GWS,   true);
-  typePicker = buildPills("typeRow", TYPES, true);
-  inspPicker = buildPills("inspRow", INSP,  true);
-  tagPicker  = buildTagPills("tagRow");
-  if (prev.core) corePicker.set(prev.core);
+  gwPicker    = buildPills("gwRow",   GWS,   true, () => renderAutoInfo());
+  levelPicker = buildLevelGrid("levelGrid", LEVELS);
+  typePicker  = buildPills("typeRow", TYPES, true);
+  inspPicker  = buildPills("inspRow", INSP,  true);
+  tagPicker   = buildTagPills("tagRow");
   if (prev.gw)   gwPicker.set(prev.gw);
+  if (prev.levels.length) levelPicker.set(prev.levels);
   if (prev.type) typePicker.set(prev.type);
   if (prev.insp) inspPicker.set(prev.insp);
   prev.tags.forEach(name => {
@@ -723,8 +829,46 @@ function rebuildPills() {
 }
 
 // ============================================================
+// Auto-info rows (Core+MC under GW; Modules under Levels)
+// ============================================================
+function renderAutoInfo() {
+  const gw = gwPicker?.get();
+  const gwInfo = document.getElementById("gwAutoInfo");
+  if (gw && GW_DEFAULTS[gw]) {
+    const d = GW_DEFAULTS[gw];
+    gwInfo.classList.remove("empty");
+    gwInfo.innerHTML = `
+      <div class="item"><div class="label">${escapeHtml(t("autoInfoCore"))}</div><div class="val">${escapeHtml(d.core)}</div></div>
+      <div class="item"><div class="label">${escapeHtml(t("autoInfoMC"))}</div><div class="val">${escapeHtml(d.mast_climber)}</div></div>
+    `;
+  } else {
+    gwInfo.classList.add("empty");
+    gwInfo.innerHTML = "";
+  }
+
+  const levels = levelPicker?.get() || [];
+  const modInfo = document.getElementById("moduleAutoInfo");
+  const mods = modulesFor(gw, levels);
+  if (mods.length) {
+    modInfo.classList.remove("empty");
+    modInfo.innerHTML = `
+      <div class="item" style="flex:1">
+        <div class="label">${escapeHtml(t("autoInfoModules"))}</div>
+        <div class="val modules">${mods.map(m => `<span class="modChip">${escapeHtml(m)}</span>`).join("")}</div>
+      </div>
+    `;
+  } else {
+    modInfo.classList.add("empty");
+    modInfo.innerHTML = "";
+  }
+}
+
+// ============================================================
 // Staging (in-memory until Save)
 // ============================================================
+// Each entry: { id, blob, mime, mediaKind, width, height, bytes,
+//   captured_at, thumbDataUrl, filenameOriginal, source,
+//   description, tags: Set<string> }
 let stagedPhotos = [];
 
 function renderThumbs() {
@@ -744,7 +888,7 @@ function renderThumbs() {
     const badges = [];
     if (p.mediaKind === "video") badges.push('<span class="badge video">▶</span>');
     if (p.description && p.description.trim()) badges.push('<span class="badge desc">📝</span>');
-    if (p.extraTags && p.extraTags.size > 0) badges.push(`<span class="badge tags">+${p.extraTags.size}</span>`);
+    if (p.tags && p.tags.size > 0) badges.push(`<span class="badge tags">#${p.tags.size}</span>`);
     meta.innerHTML = `<span>${sizeMb}</span><span class="badges">${badges.join("")}</span>`;
     div.appendChild(meta);
     const rm = document.createElement("button");
@@ -769,8 +913,7 @@ function renderThumbs() {
 // ============================================================
 async function blobToImageThumb(blob, maxDim = 320) {
   const bmp = await createImageBitmap(blob);
-  // Capture dims BEFORE close — bmp.width/height return 0 after .close().
-  const srcWidth = bmp.width, srcHeight = bmp.height;
+  const srcWidth = bmp.width, srcHeight = bmp.height; // capture BEFORE close
   const scale = Math.min(1, maxDim / Math.max(srcWidth, srcHeight));
   const w = Math.max(1, Math.round(srcWidth * scale));
   const h = Math.max(1, Math.round(srcHeight * scale));
@@ -804,11 +947,10 @@ async function blobToVideoThumb(blob, maxDim = 320) {
     };
     video.addEventListener("loadeddata", () => {
       try { video.currentTime = Math.min(0.1, (video.duration || 1) / 4); }
-      catch (_e) { ok(); /* fall back to current frame */ }
+      catch (_e) { ok(); }
     }, { once: true });
     video.addEventListener("seeked", ok, { once: true });
     video.addEventListener("error", () => fail("video load failed"), { once: true });
-    // Safety net: if seeked never fires (some iOS .mov), draw whatever's loaded after 1s.
     setTimeout(() => { if (!done && video.readyState >= 2) ok(); }, 1500);
     setTimeout(() => fail("video thumb timeout"), 6000);
     video.src = url;
@@ -847,6 +989,8 @@ async function stageFile(file, source) {
     return;
   }
   const id = uuid();
+  // Snapshot the current submission tags as this photo's starting tag set.
+  const initialTags = new Set(tagPicker?.get() || []);
   stagedPhotos.push({
     id,
     blob: file,
@@ -860,7 +1004,7 @@ async function stageFile(file, source) {
     filenameOriginal: file.name || null,
     source,
     description: "",
-    extraTags: new Set()
+    tags: initialTags
   });
   LOG("stage.ok", "id=" + id.slice(0,8), "kind=" + mediaKind, "stagedCount=" + stagedPhotos.length);
 }
@@ -894,25 +1038,19 @@ function openPhotoEditor(idx) {
   }
   document.getElementById("peDesc").value = p.description || "";
 
-  const sharedTags = tagPicker.get();
-  const sharedHost = document.getElementById("peSharedTags");
-  sharedHost.innerHTML = sharedTags.length
-    ? sharedTags.map(name => `<span class="peSharedTag">${escapeHtml(name)}</span>`).join("")
-    : `<span style="color:#5e8c75;font-size:12px">—</span>`;
-
-  const extraHost = document.getElementById("peExtraTags");
-  extraHost.innerHTML = "";
+  // Single tag list — freely add or remove.
+  const host = document.getElementById("peTagsRow");
+  host.innerHTML = "";
   TAGS.forEach(tag => {
-    if (sharedTags.includes(tag.name)) return;
     const b = document.createElement("button");
     b.type = "button";
-    b.className = "pill tag " + tag.category + (p.extraTags.has(tag.name) ? " on" : "");
+    b.className = "pill tag " + tag.category + (p.tags.has(tag.name) ? " on" : "");
     b.textContent = tag.name;
     b.addEventListener("click", () => {
-      if (p.extraTags.has(tag.name)) { p.extraTags.delete(tag.name); b.classList.remove("on"); }
-      else { p.extraTags.add(tag.name); b.classList.add("on"); }
+      if (p.tags.has(tag.name)) { p.tags.delete(tag.name); b.classList.remove("on"); }
+      else { p.tags.add(tag.name); b.classList.add("on"); }
     });
-    extraHost.appendChild(b);
+    host.appendChild(b);
   });
 
   document.getElementById("peOverlay").classList.add("show");
@@ -943,9 +1081,8 @@ document.getElementById("peRemoveBtn").addEventListener("click", () => {
 // ============================================================
 function onFormChange() {
   const missing = [];
-  if (!corePicker?.get())          missing.push(t("missingCore"));
-  if (!gwPicker?.get())            missing.push(t("missingGW"));
-  if (stagedPhotos.length === 0)   missing.push(t("missingPhoto"));
+  if (!gwPicker?.get())          missing.push(t("missingGW"));
+  if (stagedPhotos.length === 0) missing.push(t("missingPhoto"));
   const btn = document.getElementById("submitBtn");
   if (missing.length === 0) {
     btn.disabled = false;
@@ -957,21 +1094,24 @@ function onFormChange() {
 }
 
 function clearForm() {
-  corePicker.clear(); gwPicker.clear(); typePicker.clear(); inspPicker.clear(); tagPicker.clear();
-  document.getElementById("level").value = "";
+  gwPicker.clear(); levelPicker.clear(); typePicker.clear(); inspPicker.clear(); tagPicker.clear();
   document.getElementById("notes").value = "";
   document.getElementById("workDate").value = todayIso();
   stagedPhotos = [];
   renderThumbs();
+  renderAutoInfo();
 }
 
 function todayIso() { return new Date().toISOString().slice(0, 10); }
 
 document.getElementById("submitBtn").addEventListener("click", async () => {
   if (document.getElementById("submitBtn").disabled) return;
+  const gw = gwPicker.get();
+  const levels = levelPicker.get();
   const inspVal = inspPicker.get();
-  const sharedTags = tagPicker.get();
   const workDate = document.getElementById("workDate").value || todayIso();
+  const auto = GW_DEFAULTS[gw] || {};
+  const mods = modulesFor(gw, levels);
   const sub = {
     id: uuid(),
     status: "queued",
@@ -979,9 +1119,11 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
     lastError: null,
     createdAt: new Date().toISOString(),
     parentFields: {
-      core: corePicker.get(),
-      green_wall: gwPicker.get(),
-      level: document.getElementById("level").value.trim() || null,
+      core: auto.core || null,
+      green_wall: gw,
+      mast_climber: auto.mast_climber || null,
+      level: levels.length ? levels.join(", ") : null,
+      module_name: mods.length ? mods.join(", ") : null,
       type: typePicker.get(),
       pret_pour_inspection: inspVal === "true" ? true : inspVal === "false" ? false : null,
       notes: document.getElementById("notes").value.trim() || null,
@@ -989,20 +1131,20 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
       date_de_travail: workDate,
       capture_device: navigator.userAgent.slice(0, 200),
     },
-    tags: sharedTags,
     photos: stagedPhotos.map(p => ({
       id: p.id, blob: p.blob, mime: p.mime, mediaKind: p.mediaKind,
       width: p.width, height: p.height, bytes: p.bytes,
       captured_at: p.captured_at,
       filenameOriginal: p.filenameOriginal,
       description: p.description || null,
-      extraTags: Array.from(p.extraTags || []),
+      tags: Array.from(p.tags || []),
       uploaded: false,
       photoIdServer: null,
     })),
     parentIdServer: null,
   };
-  LOG("submit.click", "core=" + sub.parentFields.core, "gw=" + sub.parentFields.green_wall, "photos=" + sub.photos.length);
+  LOG("submit.click", "gw=" + gw, "core=" + sub.parentFields.core, "mc=" + sub.parentFields.mast_climber,
+      "levels=" + (levels.join(",") || "-"), "modules=" + (mods.join(",") || "-"), "photos=" + sub.photos.length);
 
   try {
     const pos = await new Promise((res, rej) => {
@@ -1032,7 +1174,7 @@ async function requestBackgroundSync() {
   try {
     const reg = await navigator.serviceWorker?.ready;
     if (reg && "sync" in reg) await reg.sync.register("drain-queue");
-  } catch (_e) { /* unsupported on iOS Safari — fine */ }
+  } catch (_e) {}
 }
 
 // ============================================================
@@ -1083,7 +1225,6 @@ async function uploadSubmission(sub) {
 
   for (const photo of sub.photos) {
     if (photo.uploaded) continue;
-    const mergedTags = Array.from(new Set([...(sub.tags || []), ...(photo.extraTags || [])]));
 
     if (!photo.photoIdServer) {
       const r = await fnCall({
@@ -1124,7 +1265,7 @@ async function uploadSubmission(sub) {
         width_px: photo.width, height_px: photo.height, bytes: photo.bytes,
         description: photo.description,
       },
-      tags: mergedTags,
+      tags: photo.tags || [],
     });
     if (!fin.ok) throw new Error(fin.error || "finalizePhoto failed");
 
@@ -1137,7 +1278,7 @@ async function uploadSubmission(sub) {
   sub.completedAt = new Date().toISOString();
   await dbPut(sub);
   LOG("upload.ok", "id=" + sub.id.slice(0,8));
-  // No auto-purge: done submissions persist in IDB until user clears them.
+  // No auto-purge: done submissions persist until user clears them.
 }
 
 async function fnCall(body) {
@@ -1193,7 +1334,7 @@ async function renderQueueSheet() {
     const div = document.createElement("div");
     div.className = "qItem";
     const photoSummary = `${s.photos.filter(p => p.uploaded).length}/${s.photos.length} files`;
-    const meta = [s.parentFields.core, s.parentFields.green_wall, s.parentFields.level, s.parentFields.type].filter(Boolean).join(" · ");
+    const meta = [s.parentFields.green_wall, s.parentFields.module_name, s.parentFields.type].filter(Boolean).join(" · ");
     div.innerHTML = `
       <div class="qHead">
         <span>${escapeHtml(meta || "—")}</span>
@@ -1246,7 +1387,7 @@ async function exportQueuedFiles() {
     for (const p of s.photos) {
       if (p.uploaded || !p.blob) continue;
       const ext = p.mediaKind === "video" ? ".mp4" : ".jpg";
-      const tag = [s.parentFields.green_wall, s.parentFields.level, s.parentFields.core].filter(Boolean).join("-") || "RIV";
+      const tag = [s.parentFields.green_wall, (s.parentFields.module_name || "").replace(/\s*\|\s*/, "-")].filter(Boolean).join("_") || "RIV";
       const name = `${tag}_${s.id.slice(0,6)}_${p.id.slice(0,6)}${ext}`;
       files.push(new File([p.blob], name, { type: p.mime || "application/octet-stream" }));
     }
@@ -1263,7 +1404,6 @@ async function exportQueuedFiles() {
       if (e.name !== "AbortError") LOG("err.export.share", e.message || String(e));
     }
   }
-  // Fallback: sequential downloads
   let n = 0;
   for (const f of files) {
     const url = URL.createObjectURL(f);
@@ -1308,7 +1448,6 @@ document.getElementById("debugCopyBtn").addEventListener("click", async () => {
     await navigator.clipboard.writeText(text);
     toast(t("debugCopied"));
   } catch (_e) {
-    // Fallback: select+copy via a textarea
     const ta = document.createElement("textarea");
     ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px";
     document.body.appendChild(ta); ta.select();
@@ -1351,11 +1490,7 @@ document.addEventListener("visibilitychange", () => {
   document.getElementById("captainName").textContent = stored || ("captain ••" + CAPTAIN_TOKEN.slice(-4));
 })();
 
-// Service worker — intentionally NOT registered. The previous SW versions
-// trapped iOS PWA installs on stale cached HTML. We only register sw.js
-// when an old SW is detected, so the self-destruct one takes over and
-// unregisters itself. Future loads run network-first; IndexedDB still
-// provides offline-write resilience for queued submissions.
+// Service worker — keep the self-destruct dance for any leftover old SWs.
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.getRegistrations().then(async (regs) => {
     if (regs.length === 0) return;
@@ -1373,6 +1508,7 @@ document.querySelectorAll(".langBtn").forEach(b =>
 // Initial render
 applyI18n();
 rebuildPills();
+renderAutoInfo();
 document.getElementById("workDate").value = todayIso();
 document.querySelectorAll(".langBtn").forEach(b => b.classList.toggle("on", b.dataset.lang === LANG));
 onFormChange();
