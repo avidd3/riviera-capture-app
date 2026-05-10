@@ -143,6 +143,26 @@
   .qItem .actions{display:flex;gap:8px;margin-top:8px}
   .qItem button{flex:1;background:#1f5a3f;color:#f1f3f0;border:1px solid #2a7c54;border-radius:6px;padding:8px;font-size:12px;cursor:pointer}
   .qItem button.danger{background:#5a1f1f;border-color:#7a2f2f}
+  .qItem.tappable{cursor:pointer}
+  .qItem.tappable:active{background:#11432f}
+  /* Submission detail overlay (deeper view of one queue row) */
+  .sdMeta{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px;background:#0d3b29;border:1px solid #1f5a3f;border-radius:8px;padding:12px;margin-bottom:14px}
+  .sdMeta .lbl{color:#7fb89c;font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:600;align-self:center}
+  .sdMeta .val{color:#fff;word-break:break-word}
+  .sdMeta .val.muted{color:#7fb89c}
+  .sdPhotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-bottom:14px}
+  .sdPhotoCard{position:relative;background:#0d3b29;border:1px solid #1f5a3f;border-radius:8px;overflow:hidden;aspect-ratio:1}
+  .sdPhotoCard.uploaded{border-color:#2a7c54}
+  .sdPhotoCard img{width:100%;height:100%;object-fit:cover;display:block}
+  .sdPhotoCard .ovl{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:space-between;padding:6px;font-size:10px;color:#fff;background:linear-gradient(transparent 50%,rgba(0,0,0,.85));pointer-events:none}
+  .sdPhotoCard .badge{background:rgba(255,255,255,.18);padding:1px 5px;border-radius:3px;font-size:9px}
+  .sdPhotoCard .badge.up{background:rgba(42,124,84,.85)}
+  .sdActions{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+  .sdActions button{padding:14px;font-size:15px;font-weight:600;border:none;border-radius:8px;cursor:pointer}
+  .sdActions .edit{background:#3da774;color:#fff}
+  .sdActions .retry{background:#7a4500;color:#fff}
+  .sdActions .discard{background:#5a1f1f;color:#fff}
+  .sdActions .lockedNote{background:#0d3b29;border:1px solid #1f5a3f;color:#7fb89c;font-size:12px;padding:10px;border-radius:8px;text-align:center;font-weight:400}
   .empty{text-align:center;color:#7fb89c;padding:24px;font-size:13px}
   .needToken{padding:32px 16px;text-align:center}
   .needToken h2{color:#ff9090}
@@ -290,6 +310,17 @@
   </div>
 </div>
 
+<!-- Submission detail overlay (deeper view of one queue row) -->
+<div class="overlay" id="submissionDetailOverlay">
+  <div class="sheet">
+    <button class="closeBtn" id="sdClose" type="button">×</button>
+    <h3><span data-i18n="sdTitle">Submission</span> <span class="sub" id="sdStatus"></span></h3>
+    <div class="sdMeta" id="sdMeta"></div>
+    <div class="sdPhotos" id="sdPhotos"></div>
+    <div class="sdActions" id="sdActions"></div>
+  </div>
+</div>
+
 <!-- Tag picker overlay (form + per-photo) -->
 <div class="overlay" id="tagPickerOverlay">
   <div class="sheet">
@@ -377,6 +408,28 @@ const I18N = {
     tagSecPlanter: "Bacs",
     tagSecPoolPlanter: "Bac Piscine",
     tagSecStatus: "Statut",
+    sdTitle: "Saisie",
+    sdEdit: "Modifier",
+    sdRetry: "Réessayer maintenant",
+    sdDiscard: "Annuler cette saisie",
+    sdLockedNote: "Cette saisie a été synchronisée avec le serveur — non modifiable depuis l'appareil.",
+    sdLockedInflight: "Envoi en cours — réessaie dans un instant.",
+    sdMetaCore: "Cœur",
+    sdMetaGW: "Mur",
+    sdMetaMC: "Mât",
+    sdMetaLevels: "Niveaux",
+    sdMetaModules: "Module(s)",
+    sdMetaType: "Type",
+    sdMetaInsp: "Insp.",
+    sdMetaDate: "Date",
+    sdMetaNotes: "Notes",
+    sdMetaCreated: "Créé",
+    sdMetaCompleted: "Terminé",
+    sdMetaAttempts: "Essais",
+    sdMetaError: "Erreur",
+    sdConfirmEdit: "Charger cette saisie dans le formulaire ? Le brouillon actuel sera remplacé.",
+    sdConfirmDiscard: "Supprimer définitivement cette saisie locale ?",
+    sdEditLoaded: n => `Saisie chargée. ${n} fichier${n===1?"":"s"} prêt à modifier.`,
     sectionPhotos: "Photos & Vidéos",
     photosTapHint: "appuyer sur une vignette pour modifier",
     capturePhoto: "Photo",
@@ -461,6 +514,28 @@ const I18N = {
     tagSecPlanter: "Planters",
     tagSecPoolPlanter: "Pool Planter",
     tagSecStatus: "Status",
+    sdTitle: "Submission",
+    sdEdit: "Edit",
+    sdRetry: "Retry now",
+    sdDiscard: "Discard this submission",
+    sdLockedNote: "This submission has been synced to the server — not editable from device.",
+    sdLockedInflight: "Upload in progress — retry shortly.",
+    sdMetaCore: "Core",
+    sdMetaGW: "Wall",
+    sdMetaMC: "Mast",
+    sdMetaLevels: "Levels",
+    sdMetaModules: "Module(s)",
+    sdMetaType: "Type",
+    sdMetaInsp: "Insp.",
+    sdMetaDate: "Date",
+    sdMetaNotes: "Notes",
+    sdMetaCreated: "Created",
+    sdMetaCompleted: "Completed",
+    sdMetaAttempts: "Attempts",
+    sdMetaError: "Error",
+    sdConfirmEdit: "Load this submission into the form? Current draft will be replaced.",
+    sdConfirmDiscard: "Permanently delete this local submission?",
+    sdEditLoaded: n => `Loaded. ${n} file${n===1?"":"s"} ready to edit.`,
     sectionPhotos: "Photos & Videos",
     photosTapHint: "tap a thumbnail to edit",
     capturePhoto: "Photo",
@@ -1455,10 +1530,15 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
       width: p.width, height: p.height, bytes: p.bytes,
       captured_at: p.captured_at,
       filenameOriginal: p.filenameOriginal,
+      // thumbDataUrl persists to IDB so the history detail view can render
+      // thumbnails without re-extracting from the blob (especially relevant
+      // for video, where extraction is async and can fail).
+      thumbDataUrl: p.thumbDataUrl,
       description: p.description || null,
       tags: Array.from(p.tags || []),
       uploaded: false,
       photoIdServer: null,
+      source: p.source,
     })),
     parentIdServer: null,
   };
@@ -1677,19 +1757,16 @@ async function renderQueueSheet() {
   list.innerHTML = "";
   all.forEach(s => {
     const div = document.createElement("div");
-    div.className = "qItem" + (s.status === "uploading" ? " uploading" : "");
+    div.className = "qItem tappable" + (s.status === "uploading" ? " uploading" : "");
     const uploadedN = s.photos.filter(p => p.uploaded).length;
     const totalN = s.photos.length;
     const photoSummary = `${uploadedN}/${totalN} files`;
     const meta = [s.parentFields.green_wall, s.parentFields.module_name, s.parentFields.type].filter(Boolean).join(" · ");
-    // Active upload? Use the live photoIdx (so the bar advances even before
-    // photo.uploaded flips, since there's a PUT mid-flight).
     let pctNum = totalN > 0 ? Math.round((uploadedN / totalN) * 100) : 0;
     if (activeUpload && activeUpload.subId === s.id) {
       pctNum = totalN > 0 ? Math.round((activeUpload.photoIdx / totalN) * 100) : 0;
     }
-    const showBar = s.status === "uploading" || (s.status === "done" && uploadedN > 0) ||
-                    (s.status !== "done" && uploadedN > 0);
+    const showBar = s.status === "uploading" || uploadedN > 0;
     div.innerHTML = `
       <div class="qHead">
         <span>${escapeHtml(meta || "—")}</span>
@@ -1698,25 +1775,180 @@ async function renderQueueSheet() {
       <div>${photoSummary} · ${new Date(s.createdAt).toLocaleString()}</div>
       ${showBar ? `<div class="progress"><div class="bar" style="width:${pctNum}%"></div></div>` : ""}
       ${s.lastError ? `<div class="err">${escapeHtml(s.lastError)}</div>` : ""}
-      <div class="actions">
-        ${s.status === "error" ? `<button data-act="retry" data-id="${s.id}">${t("queueRetry")}</button>` : ""}
-        ${s.status === "done"  ? `<button data-act="del"   data-id="${s.id}">${t("queueClear")}</button>` : ""}
-        ${s.status !== "uploading" && s.status !== "done" ? `<button class="danger" data-act="del" data-id="${s.id}">${t("queueDiscard")}</button>` : ""}
-      </div>
     `;
+    div.addEventListener("click", () => openSubmissionDetail(s.id));
     list.appendChild(div);
   });
-  list.querySelectorAll("button[data-act]").forEach(b => {
-    b.addEventListener("click", async () => {
-      const id = b.dataset.id;
-      if (b.dataset.act === "retry") {
-        const s = await dbGet(id);
-        if (s) { s.status = "queued"; s.lastError = null; await dbPut(s); drainQueue(); }
-      } else if (b.dataset.act === "del") {
-        await dbDel(id); renderQueueSheet(); renderQueueBadge();
-      }
-    });
+}
+
+// ============================================================
+// Submission detail overlay (deeper view of one IDB submission)
+// ============================================================
+async function openSubmissionDetail(id) {
+  const sub = await dbGet(id);
+  if (!sub) return;
+  LOG("submission.detail.open", "id=" + id.slice(0,8), "status=" + sub.status);
+
+  const meta = document.getElementById("sdMeta");
+  const photosHost = document.getElementById("sdPhotos");
+  const actionsHost = document.getElementById("sdActions");
+  const statusEl = document.getElementById("sdStatus");
+
+  statusEl.textContent = sub.status + (sub.attempts ? ` · ${sub.attempts}` : "");
+
+  const f = sub.parentFields || {};
+  const inspLabel = f.pret_pour_inspection === true ? t("inspReady")
+                  : f.pret_pour_inspection === false ? t("inspNotReady") : "—";
+  const fmt = (lbl, val) => val ? `<div class="lbl">${escapeHtml(lbl)}</div><div class="val">${escapeHtml(String(val))}</div>` : "";
+  meta.innerHTML = [
+    fmt(t("sdMetaGW"),       f.green_wall),
+    fmt(t("sdMetaCore"),     f.core),
+    fmt(t("sdMetaMC"),       f.mast_climber),
+    fmt(t("sdMetaLevels"),   f.level),
+    fmt(t("sdMetaModules"),  f.module_name),
+    fmt(t("sdMetaType"),     f.type),
+    fmt(t("sdMetaInsp"),     inspLabel === "—" ? null : inspLabel),
+    fmt(t("sdMetaDate"),     f.date_de_travail),
+    fmt(t("sdMetaNotes"),    f.notes),
+    fmt(t("sdMetaCreated"),  new Date(sub.createdAt).toLocaleString()),
+    sub.completedAt ? fmt(t("sdMetaCompleted"), new Date(sub.completedAt).toLocaleString()) : "",
+    sub.attempts ? fmt(t("sdMetaAttempts"), sub.attempts) : "",
+    sub.lastError ? `<div class="lbl">${t("sdMetaError")}</div><div class="val muted" style="color:#ff9090">${escapeHtml(sub.lastError)}</div>` : "",
+  ].join("");
+
+  photosHost.innerHTML = "";
+  sub.photos.forEach(p => {
+    const card = document.createElement("div");
+    card.className = "sdPhotoCard" + (p.uploaded ? " uploaded" : "");
+    const tagsCount = (p.tags || []).length;
+    const desc = p.description && p.description.trim();
+    card.innerHTML = `
+      ${p.thumbDataUrl ? `<img src="${p.thumbDataUrl}" alt="">` : ""}
+      <div class="ovl">
+        <span class="badge">${escapeHtml(p.mediaKind === "video" ? "▶" : ((p.bytes/1024/1024).toFixed(1)+"MB"))}</span>
+        <span class="badge ${p.uploaded ? "up" : ""}">${p.uploaded ? "✓" : (desc || tagsCount ? "📝" : "")}</span>
+      </div>
+    `;
+    photosHost.appendChild(card);
   });
+
+  // Action buttons depend on state.
+  // Editable iff nothing has hit the server yet (parent not created, no
+  // photos uploaded). Once there's any server-side state, the captain
+  // can only retry pending uploads or discard the local copy.
+  const anyUploaded = sub.photos.some(p => p.uploaded);
+  const everTouched = !!sub.parentIdServer || anyUploaded;
+  const isLocked    = sub.status === "uploading" || sub.status === "done";
+  const canEdit     = !everTouched && !isLocked;
+
+  actionsHost.innerHTML = "";
+  if (canEdit) {
+    const editBtn = document.createElement("button");
+    editBtn.type = "button"; editBtn.className = "edit";
+    editBtn.textContent = "✎ " + t("sdEdit");
+    editBtn.addEventListener("click", () => editSubmissionInForm(sub));
+    actionsHost.appendChild(editBtn);
+  }
+  if (sub.status === "error") {
+    const retryBtn = document.createElement("button");
+    retryBtn.type = "button"; retryBtn.className = "retry";
+    retryBtn.textContent = t("sdRetry");
+    retryBtn.addEventListener("click", async () => {
+      const s = await dbGet(sub.id);
+      if (s) { s.status = "queued"; s.lastError = null; if (s.attempts >= MAX_ATTEMPTS) s.attempts = MAX_ATTEMPTS - 1; await dbPut(s); }
+      document.getElementById("submissionDetailOverlay").classList.remove("show");
+      drainQueue();
+    });
+    actionsHost.appendChild(retryBtn);
+  }
+  if (!isLocked) {
+    const discardBtn = document.createElement("button");
+    discardBtn.type = "button"; discardBtn.className = "discard";
+    discardBtn.textContent = t("sdDiscard");
+    discardBtn.addEventListener("click", async () => {
+      if (!confirm(t("sdConfirmDiscard"))) return;
+      await dbDel(sub.id);
+      document.getElementById("submissionDetailOverlay").classList.remove("show");
+      renderQueueSheet(); renderQueueBadge();
+    });
+    actionsHost.appendChild(discardBtn);
+  }
+  if (isLocked || everTouched) {
+    const note = document.createElement("div");
+    note.className = "lockedNote";
+    note.textContent = sub.status === "uploading" ? t("sdLockedInflight") : t("sdLockedNote");
+    actionsHost.appendChild(note);
+  }
+
+  document.getElementById("submissionDetailOverlay").classList.add("show");
+}
+document.getElementById("sdClose").addEventListener("click", () => {
+  document.getElementById("submissionDetailOverlay").classList.remove("show");
+});
+
+// Load a submission back into the form for editing. We delete the IDB row
+// outright — saving will create a fresh submission with a new client_id, so
+// the old record can't accidentally re-upload concurrently. Caller is
+// responsible for confirming with the captain that any in-progress draft
+// will be lost.
+async function editSubmissionInForm(sub) {
+  const hasDraft = !!gwPicker?.get() || (levelPicker?.get() || []).length > 0
+                || stagedPhotos.length > 0 || submissionTags.size > 0
+                || (document.getElementById("notes").value || "").trim().length > 0;
+  if (hasDraft && !confirm(t("sdConfirmEdit"))) return;
+
+  const f = sub.parentFields || {};
+  // Restore form fields
+  if (f.green_wall) gwPicker.set(f.green_wall);
+  const lvls = (f.level || "").split(/,\s*/).map(s => s.trim()).filter(Boolean);
+  if (lvls.length) levelPicker.set(lvls);
+  if (f.type) typePicker.set(f.type);
+  inspPicker.set(f.pret_pour_inspection === true ? "true"
+               : f.pret_pour_inspection === false ? "false" : null);
+  document.getElementById("workDate").value = f.date_de_travail || todayIso();
+  document.getElementById("notes").value = f.notes || "";
+
+  // Tags: collect the union of all photo tags as the new submission default.
+  // (Per-photo tags are restored intact below — submissionTags is just the
+  // "default applied to NEW photos staged from here on".)
+  submissionTags.clear();
+  const seen = new Set();
+  sub.photos.forEach(p => (p.tags || []).forEach(name => { if (!seen.has(name)) { seen.add(name); submissionTags.add(name); } }));
+
+  // Restore staged photos from the submission's photo list.
+  stagedPhotos = sub.photos.map(p => ({
+    id: p.id || uuid(),
+    blob: p.blob,                      // null if uploaded — but we only get
+                                       // here when nothing's uploaded yet
+    mime: p.mime,
+    mediaKind: p.mediaKind || (p.mime && p.mime.startsWith("video/") ? "video" : "image"),
+    width: p.width || 0,
+    height: p.height || 0,
+    bytes: p.bytes || 0,
+    captured_at: p.captured_at || new Date().toISOString(),
+    thumbDataUrl: p.thumbDataUrl || VIDEO_PLACEHOLDER_DATA_URL,
+    filenameOriginal: p.filenameOriginal || null,
+    source: p.source || "upload",
+    description: p.description || "",
+    tags: new Set(p.tags || [])
+  }));
+
+  // Delete the original so save creates a fresh submission with a new
+  // client_submission_id (avoiding any chance of double-upload if drain
+  // raced with us).
+  await dbDel(sub.id);
+  LOG("submission.editLoaded", "from=" + sub.id.slice(0,8), "photos=" + stagedPhotos.length);
+
+  renderAutoInfo();
+  renderThumbs();
+  updateFormTagChipCount();
+  onFormChange();
+
+  document.getElementById("submissionDetailOverlay").classList.remove("show");
+  document.getElementById("queueOverlay").classList.remove("show");
+  toast(t("sdEditLoaded", stagedPhotos.length));
+  // Scroll to top so captain sees what was loaded
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 document.getElementById("queueBadge").addEventListener("click", () => {
