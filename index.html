@@ -575,22 +575,29 @@ const INSP = [
   { value: "true",  labelKey: "inspReady" }
 ];
 
+// Tags listed in installation sequence order — bottom-up assembly steps,
+// then the cross-cutting status/issue tags. The pill UI renders in this
+// declaration order so the captain can scan from "what we're starting with"
+// to "what we're finishing with" without alphabetizing.
 const TAGS = [
-  { name: "Baskets",           category: "component" },
-  { name: "Brackets",          category: "component" },
-  { name: "Breather Membrane", category: "component" },
-  { name: "Cavity Barrier",    category: "component" },
-  { name: "Gutter",            category: "component" },
-  { name: "Insulation",        category: "component" },
-  { name: "Irrigation",        category: "component" },
-  { name: "Metal Plate",       category: "component" },
-  { name: "Omega",             category: "component" },
-  { name: "U-Stop",            category: "component" },
-  { name: "Install",           category: "status" },
-  { name: "Field of work",     category: "status" },
-  { name: "Rework",            category: "status" },
-  { name: "Defect",            category: "status" },
-  { name: "Issue to Report",   category: "issue" },
+  { name: "Brackets",               category: "component" },
+  { name: "Side Cover",             category: "component" },
+  { name: "Insulation",             category: "component" },
+  { name: "Cavity Barrier",         category: "component" },
+  { name: "U-Stop",                 category: "component" },
+  { name: "Omega",                  category: "component" },
+  { name: "Gutter",                 category: "component" },
+  { name: "Metal Plate",            category: "component" },
+  { name: "Breather Membrane",      category: "component" },
+  { name: "Rails",                  category: "component" },
+  { name: "Breather Membrane Tape", category: "component" },
+  { name: "Penetration Sleeve",     category: "component" },
+  { name: "BH",                     category: "component" },
+  { name: "Baskets",                category: "component" },
+  { name: "Irrigation",             category: "component" },
+  { name: "Defect",                 category: "status" },
+  { name: "Rework",                 category: "status" },
+  { name: "Issue to Report",        category: "issue" },
 ];
 
 // ============================================================
@@ -1295,9 +1302,17 @@ async function uploadSubmission(sub) {
   renderQueueBadge();
 
   if (!sub.parentIdServer) {
-    const r = await fnCall({ mode: "createParent", parentFields: sub.parentFields });
+    // clientSubmissionId = sub.id makes createParent idempotent on the server.
+    // If a previous attempt's response was lost in transit, the server returns
+    // the same parentId instead of inserting a duplicate row.
+    const r = await fnCall({
+      mode: "createParent",
+      clientSubmissionId: sub.id,
+      parentFields: sub.parentFields,
+    });
     if (!r.ok) throw new Error(r.error || "createParent failed");
     sub.parentIdServer = r.parentId;
+    if (r.idempotent) LOG("upload.parent.idempotent", "id=" + sub.id.slice(0,8));
     await dbPut(sub);
   }
 
@@ -1309,9 +1324,12 @@ async function uploadSubmission(sub) {
     if (photo.uploaded) continue;
 
     if (!photo.photoIdServer) {
+      // clientPhotoId = photo.id makes createPhoto idempotent on the server.
+      // Same lost-response defence as createParent above.
       const r = await fnCall({
         mode: "createPhoto",
         parentId: sub.parentIdServer,
+        clientPhotoId: photo.id,
         photoFields: {
           captured_at: photo.captured_at,
           width_px: photo.width,
@@ -1327,6 +1345,7 @@ async function uploadSubmission(sub) {
       photo.signedUrl = r.signedUrl;
       photo.signedToken = r.signedToken;
       photo.storagePath = r.storagePath;
+      if (r.idempotent) LOG("upload.photo.idempotent", "id=" + photo.id.slice(0,8));
       await dbPut(sub);
     }
 
