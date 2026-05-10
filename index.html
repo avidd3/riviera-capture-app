@@ -42,6 +42,8 @@
   .pill.tag.status.on{background:#7a4500;border-color:#a05a00}
   .pill.tag.issue{border-color:#a02f2f}
   .pill.tag.issue.on{background:#7a1f1f;border-color:#a02f2f}
+  .pill.tag.planter{border-color:#9a7bc0}
+  .pill.tag.planter.on{background:#5b4279;border-color:#9a7bc0}
   input[type=text],input[type=date],textarea{width:100%;background:#0d3b29;color:#f1f3f0;border:1px solid #2a7c54;border-radius:8px;padding:12px;font-size:16px;font-family:inherit}
   textarea{resize:vertical;min-height:80px}
   /* Auto-info row (Core + Mast Climber under GW; Modules under Levels) */
@@ -575,29 +577,60 @@ const INSP = [
   { value: "true",  labelKey: "inspReady" }
 ];
 
-// Tags listed in installation sequence order — bottom-up assembly steps,
-// then the cross-cutting status/issue tags. The pill UI renders in this
-// declaration order so the captain can scan from "what we're starting with"
-// to "what we're finishing with" without alphabetizing.
+// Tags listed in installation sequence order — facade components first
+// (bottom-up assembly), then planter-specific items, then status / issue.
+// Categories are visual only (color-coded pills): component (blue),
+// planter (purple), status (orange), issue (red).
 const TAGS = [
-  { name: "Brackets",               category: "component" },
-  { name: "Side Cover",             category: "component" },
-  { name: "Insulation",             category: "component" },
-  { name: "Cavity Barrier",         category: "component" },
-  { name: "U-Stop",                 category: "component" },
-  { name: "Omega",                  category: "component" },
-  { name: "Gutter",                 category: "component" },
-  { name: "Metal Plate",            category: "component" },
-  { name: "Breather Membrane",      category: "component" },
-  { name: "Rails",                  category: "component" },
-  { name: "Breather Membrane Tape", category: "component" },
-  { name: "Penetration Sleeve",     category: "component" },
-  { name: "BH",                     category: "component" },
-  { name: "Baskets",                category: "component" },
-  { name: "Irrigation",             category: "component" },
-  { name: "Defect",                 category: "status" },
-  { name: "Rework",                 category: "status" },
-  { name: "Issue to Report",        category: "issue" },
+  // --- Facade components (install sequence) ---
+  { name: "Brackets",                   category: "component" },
+  { name: "Side Breather Membrane - R", category: "component" },
+  { name: "Side Breather Membrane - L", category: "component" },
+  { name: "Insulation",                 category: "component" },
+  { name: "Cavity Barrier",             category: "component" },
+  { name: "U-Stop",                     category: "component" },
+  { name: "Omega",                      category: "component" },
+  { name: "Gutter",                     category: "component" },
+  { name: "Metal Plate",                category: "component" },
+  { name: "Breather Membrane",          category: "component" },
+  { name: "Rails",                      category: "component" },
+  { name: "Breather Membrane Tape",     category: "component" },
+  { name: "Penetration Sleeve",         category: "component" },
+  { name: "BMH - R",                    category: "component" },
+  { name: "BMH - L",                    category: "component" },
+  { name: "Baskets",                    category: "component" },
+  { name: "Water Distribution",            category: "component" },
+  { name: "Water Distribution Connection", category: "component" },
+  { name: "Drip Lines",                    category: "component" },
+  { name: "Water Evacuation",              category: "component" },
+  { name: "Water Evacuation Connection",   category: "component" },
+
+  // --- Planters ---
+  { name: "Small Planter",                          category: "planter" },
+  { name: "Large Planter",                          category: "planter" },
+  { name: "Pool Planter",                           category: "planter" },
+  { name: "Drainage Board",                         category: "planter" },
+  { name: "NAP 50",                                 category: "planter" },
+  { name: "Irrigation",                             category: "planter" },
+  { name: "Irrigation Connection",                  category: "planter" },
+  { name: "Evacuation",                             category: "planter" },
+  { name: "Evacuation Connection",                  category: "planter" },
+  { name: "Substrate",                              category: "planter" },
+  { name: "Pool Planter - Inspection Box - R",      category: "planter" },
+  { name: "Pool Planter - Inspection Box - L",      category: "planter" },
+  { name: "Pool Planter - Evacuation Connection - R", category: "planter" },
+  { name: "Pool Planter - Evacuation Connection - L", category: "planter" },
+  { name: "Pool Planter - Drainage Board",          category: "planter" },
+  { name: "Pool Planter - layer 1",                 category: "planter" },
+  { name: "Pool Planter - layer 2",                 category: "planter" },
+  { name: "Pool Planter - layer 3",                 category: "planter" },
+  { name: "Pool Planter - layer 4",                 category: "planter" },
+  { name: "Pool Planter - Mulch",                   category: "planter" },
+
+  // --- Status / issue ---
+  { name: "Defect",          category: "status" },
+  { name: "Rework",          category: "status" },
+  { name: "Issue to Report", category: "issue" },
 ];
 
 // ============================================================
