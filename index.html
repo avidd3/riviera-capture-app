@@ -44,6 +44,34 @@
   .pill.tag.issue.on{background:#7a1f1f;border-color:#a02f2f}
   .pill.tag.planter{border-color:#9a7bc0}
   .pill.tag.planter.on{background:#5b4279;border-color:#9a7bc0}
+  /* Tags chip + picker modal (replaces inline tag pillrow) */
+  .tagChip{display:flex;align-items:center;justify-content:space-between;gap:6px;background:#0d3b29;border:1px solid #2a7c54;color:#d3e6db;padding:12px 14px;border-radius:10px;font:inherit;font-size:15px;cursor:pointer;width:100%}
+  .tagChip:active{background:#11432f}
+  .tagChip .lbl{display:flex;align-items:center;gap:6px}
+  .tagChip .ct{background:#2a7c54;color:#fff;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;font-variant-numeric:tabular-nums;min-width:24px;text-align:center}
+  .tagChip .ct.zero{background:#1f5a3f;color:#7fb89c}
+  .tpSearch{width:100%;padding:12px;background:#0d3b29;color:#f1f3f0;border:1px solid #2a7c54;border-radius:8px;font:inherit;font-size:16px;margin-bottom:14px}
+  .tpSection{margin-bottom:18px}
+  .tpSection.empty{display:none}
+  .tpSectionHead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #1f5a3f;gap:8px}
+  .tpSectionHead .title{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#7fb89c;font-weight:600}
+  .tpSectionHead .badge{font-size:10px;background:#2a7c54;color:#fff;padding:2px 8px;border-radius:999px;font-weight:600;white-space:nowrap}
+  .tpSectionHead .badge.zero{display:none}
+  .tpGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}
+  .tpPill{position:relative;background:#0d3b29;border:1px solid #2a7c54;color:#d3e6db;padding:8px 10px;border-radius:6px;font:inherit;font-size:13px;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:6px;line-height:1.2;min-height:38px}
+  .tpPill.on{background:#2a7c54;color:#fff;border-color:#3da774}
+  .tpPill.hidden{display:none}
+  .tpPill .name{flex:1;overflow:hidden;text-overflow:ellipsis}
+  .tpPill .ct{font-size:10px;background:rgba(255,255,255,.18);padding:1px 5px;border-radius:6px;font-variant-numeric:tabular-nums}
+  .tpPill.planter{border-color:#9a7bc0}
+  .tpPill.planter.on{background:#5b4279;border-color:#9a7bc0}
+  .tpPill.status{border-color:#a05a00}
+  .tpPill.status.on{background:#7a4500;border-color:#a05a00}
+  .tpFooter{position:sticky;bottom:0;background:#11432f;padding:10px 0 0 0;margin-top:10px;border-top:1px solid #1f5a3f;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .tpFooter .info{flex:1;font-size:12px;color:#7fb89c;min-width:100%;margin-bottom:4px}
+  .tpFooter .clear,.tpFooter .done{flex:1;padding:11px 14px;border:none;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;font-size:14px}
+  .tpFooter .clear{background:#1f5a3f;color:#7fb89c;border:1px solid #2a7c54}
+  .tpFooter .done{background:#3da774;color:#fff}
   input[type=text],input[type=date],textarea{width:100%;background:#0d3b29;color:#f1f3f0;border:1px solid #2a7c54;border-radius:8px;padding:12px;font-size:16px;font-family:inherit}
   textarea{resize:vertical;min-height:80px}
   /* Auto-info row (Core + Mast Climber under GW; Modules under Levels) */
@@ -198,7 +226,10 @@
 <!-- 5. Tags (default for new photos, editable per-photo) -->
 <section>
   <h2><span data-i18n="sectionTags">Tags</span> <span class="hint" data-i18n="tagsHint">default for new photos · editable per-photo</span></h2>
-  <div class="pillrow" id="tagRow"></div>
+  <button type="button" class="tagChip" id="formTagChip">
+    <span class="lbl"><span>🏷</span> <span data-i18n="tagChipLabel">Tags</span></span>
+    <span class="ct zero" id="formTagChipCount">0</span>
+  </button>
 </section>
 
 <!-- 6. Notes -->
@@ -248,6 +279,21 @@
   </div>
 </div>
 
+<!-- Tag picker overlay (form + per-photo) -->
+<div class="overlay" id="tagPickerOverlay">
+  <div class="sheet">
+    <button class="closeBtn" id="tagPickerClose" type="button">×</button>
+    <h3><span id="tagPickerTitle">Tags</span></h3>
+    <input type="text" id="tagPickerSearch" class="tpSearch" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="Search tags…">
+    <div id="tagPickerBody"></div>
+    <div class="tpFooter">
+      <div class="info" id="tagPickerInfo">0 selected · 0 shown</div>
+      <button type="button" class="clear" id="tagPickerClear">Clear all</button>
+      <button type="button" class="done" id="tagPickerDone">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- Per-photo editor overlay -->
 <div class="overlay" id="peOverlay">
   <div class="sheet">
@@ -260,7 +306,10 @@
     </div>
     <div class="peField">
       <div class="lbl"><span data-i18n="photoTagsLabel">Tags for this file</span><span class="sub" data-i18n="photoTagsHint">add or remove freely</span></div>
-      <div class="pillrow" id="peTagsRow"></div>
+      <button type="button" class="tagChip" id="peTagChip">
+        <span class="lbl"><span>🏷</span> <span data-i18n="tagChipLabel">Tags</span></span>
+        <span class="ct zero" id="peTagChipCount">0</span>
+      </button>
     </div>
     <div class="peActions">
       <button type="button" class="peRemove" id="peRemoveBtn" data-i18n="photoRemove">🗑 Remove</button>
@@ -303,6 +352,19 @@ const I18N = {
     notesPlaceholder: "Commentaire optionnel sur cette saisie",
     sectionTags: "Étiquettes",
     tagsHint: "par défaut pour les nouvelles photos · modifiable par photo",
+    tagChipLabel: "Étiquettes",
+    tagChipFormTitle: "Étiquettes par défaut",
+    tagChipPhotoTitle: "Étiquettes pour cette photo",
+    tagPickerSearchPh: "Rechercher…",
+    tagPickerInfo: (s, n) => `${s} sélectionnées · ${n} visibles`,
+    tagPickerClearAll: "Tout effacer",
+    tagPickerDone: "Terminé",
+    tagPickerOnBadge: n => `${n} actif${n===1?"":"s"}`,
+    tagSecGwComponents: "Mur végétal — Composants",
+    tagSecWater: "Mur végétal — Eau",
+    tagSecPlanter: "Bacs",
+    tagSecPoolPlanter: "Bac Piscine",
+    tagSecStatus: "Statut",
     sectionPhotos: "Photos & Vidéos",
     photosTapHint: "appuyer sur une vignette pour modifier",
     capturePhoto: "Photo",
@@ -374,6 +436,19 @@ const I18N = {
     notesPlaceholder: "Optional comment about this submission",
     sectionTags: "Tags",
     tagsHint: "default for new photos · editable per-photo",
+    tagChipLabel: "Tags",
+    tagChipFormTitle: "Default tags for new photos",
+    tagChipPhotoTitle: "Tags for this photo",
+    tagPickerSearchPh: "Search tags…",
+    tagPickerInfo: (s, n) => `${s} selected · ${n} shown`,
+    tagPickerClearAll: "Clear all",
+    tagPickerDone: "Done",
+    tagPickerOnBadge: n => `${n} on`,
+    tagSecGwComponents: "Green Wall — Components",
+    tagSecWater: "Green Wall — Water",
+    tagSecPlanter: "Planters",
+    tagSecPoolPlanter: "Pool Planter",
+    tagSecStatus: "Status",
     sectionPhotos: "Photos & Videos",
     photosTapHint: "tap a thumbnail to edit",
     capturePhoto: "Photo",
@@ -577,61 +652,45 @@ const INSP = [
   { value: "true",  labelKey: "inspReady" }
 ];
 
-// Tags listed in installation sequence order — facade components first
-// (bottom-up assembly), then planter-specific items, then status / issue.
-// Categories are visual only (color-coded pills): component (blue),
-// planter (purple), status (orange), issue (red).
-const TAGS = [
-  // --- Facade components (install sequence) ---
-  { name: "Brackets",                   category: "component" },
-  { name: "Side Breather Membrane - R", category: "component" },
-  { name: "Side Breather Membrane - L", category: "component" },
-  { name: "Insulation",                 category: "component" },
-  { name: "Cavity Barrier",             category: "component" },
-  { name: "U-Stop",                     category: "component" },
-  { name: "Omega",                      category: "component" },
-  { name: "Gutter",                     category: "component" },
-  { name: "Metal Plate",                category: "component" },
-  { name: "Breather Membrane",          category: "component" },
-  { name: "Rails",                      category: "component" },
-  { name: "Breather Membrane Tape",     category: "component" },
-  { name: "Penetration Sleeve",         category: "component" },
-  { name: "BMH - R",                    category: "component" },
-  { name: "BMH - L",                    category: "component" },
-  { name: "Baskets",                    category: "component" },
-  { name: "Water Distribution",            category: "component" },
-  { name: "Water Distribution Connection", category: "component" },
-  { name: "Drip Lines",                    category: "component" },
-  { name: "Water Evacuation",              category: "component" },
-  { name: "Water Evacuation Connection",   category: "component" },
-
-  // --- Planters ---
-  { name: "Small Planter",                          category: "planter" },
-  { name: "Large Planter",                          category: "planter" },
-  { name: "Pool Planter",                           category: "planter" },
-  { name: "Drainage Board",                         category: "planter" },
-  { name: "NAP 50",                                 category: "planter" },
-  { name: "Irrigation",                             category: "planter" },
-  { name: "Irrigation Connection",                  category: "planter" },
-  { name: "Evacuation",                             category: "planter" },
-  { name: "Evacuation Connection",                  category: "planter" },
-  { name: "Substrate",                              category: "planter" },
-  { name: "Pool Planter - Inspection Box - R",      category: "planter" },
-  { name: "Pool Planter - Inspection Box - L",      category: "planter" },
-  { name: "Pool Planter - Evacuation Connection - R", category: "planter" },
-  { name: "Pool Planter - Evacuation Connection - L", category: "planter" },
-  { name: "Pool Planter - Drainage Board",          category: "planter" },
-  { name: "Pool Planter - layer 1",                 category: "planter" },
-  { name: "Pool Planter - layer 2",                 category: "planter" },
-  { name: "Pool Planter - layer 3",                 category: "planter" },
-  { name: "Pool Planter - layer 4",                 category: "planter" },
-  { name: "Pool Planter - Mulch",                   category: "planter" },
-
-  // --- Status / issue ---
-  { name: "Defect",          category: "status" },
-  { name: "Rework",          category: "status" },
-  { name: "Issue to Report", category: "issue" },
+// Tag vocabulary, grouped into sections for the picker modal.
+// `cssCategory` drives the pill color (component/planter/status).
+// `titleKey` is an i18n lookup. The flat TAGS array below is derived for
+// callers (validators, autocomplete) that just need a name → category map.
+const TAG_SECTIONS = [
+  { id: "gw", titleKey: "tagSecGwComponents", cssCategory: "component", tags: [
+    "Brackets",
+    "Side Breather Membrane - R", "Side Breather Membrane - L",
+    "Insulation", "Cavity Barrier", "U-Stop", "Omega", "Gutter",
+    "Metal Plate", "Breather Membrane", "Rails",
+    "Breather Membrane Tape", "Penetration Sleeve",
+    "BMH - R", "BMH - L",
+    "Baskets",
+  ]},
+  { id: "water", titleKey: "tagSecWater", cssCategory: "component", tags: [
+    "Water Distribution", "Water Distribution Connection",
+    "Drip Lines",
+    "Water Evacuation", "Water Evacuation Connection",
+  ]},
+  { id: "planter", titleKey: "tagSecPlanter", cssCategory: "planter", tags: [
+    "Small Planter", "Large Planter", "Pool Planter",
+    "Drainage Board", "NAP 50",
+    "Irrigation", "Irrigation Connection",
+    "Evacuation", "Evacuation Connection",
+    "Substrate",
+  ]},
+  { id: "pool", titleKey: "tagSecPoolPlanter", cssCategory: "planter", tags: [
+    "Pool Planter - Inspection Box - R", "Pool Planter - Inspection Box - L",
+    "Pool Planter - Evacuation Connection - R", "Pool Planter - Evacuation Connection - L",
+    "Pool Planter - Drainage Board",
+    "Pool Planter - layer 1", "Pool Planter - layer 2",
+    "Pool Planter - layer 3", "Pool Planter - layer 4",
+    "Pool Planter - Mulch",
+  ]},
+  { id: "status", titleKey: "tagSecStatus", cssCategory: "status", tags: [
+    "Defect", "Rework", "Issue to Report",
+  ]},
 ];
+const TAGS = TAG_SECTIONS.flatMap(s => s.tags.map(name => ({ name, category: s.cssCategory })));
 
 // ============================================================
 // Cookie + captain identity
@@ -798,32 +857,131 @@ function buildPills(rowId, options, allowNone = false, onChange) {
   };
 }
 
-// Multi-select tag pill row.
-function buildTagPills(rowId) {
-  const row = document.getElementById(rowId);
-  row.innerHTML = "";
-  const selected = new Set();
-  TAGS.forEach(tag => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "pill tag " + tag.category;
-    b.textContent = tag.name;
-    b.dataset.val = tag.name;
-    b.addEventListener("click", () => {
-      if (selected.has(tag.name)) { selected.delete(tag.name); b.classList.remove("on"); }
-      else { selected.add(tag.name); b.classList.add("on"); }
-    });
-    row.appendChild(b);
-  });
-  return {
-    get: () => Array.from(selected),
-    has: (name) => selected.has(name),
-    clear: () => {
-      selected.clear();
-      row.querySelectorAll(".pill").forEach(p => p.classList.remove("on"));
-    }
-  };
+// Submission-level tag state: a single Set, edited via the modal picker.
+// Replaces the inline tagRow that used to be built by buildTagPills.
+const submissionTags = new Set();
+function updateFormTagChipCount() {
+  const ct = document.getElementById("formTagChipCount");
+  if (!ct) return;
+  ct.textContent = submissionTags.size;
+  ct.classList.toggle("zero", submissionTags.size === 0);
 }
+function updatePeTagChipCount(p) {
+  const ct = document.getElementById("peTagChipCount");
+  if (!ct || !p) return;
+  ct.textContent = p.tags.size;
+  ct.classList.toggle("zero", p.tags.size === 0);
+}
+
+// ============================================================
+// Tag picker modal — sectioned, searchable, multi-column grid.
+// Operates directly on the caller's Set (live-updates), so Done and
+// the × close are equivalent. The footer "Clear all" empties the Set.
+// ============================================================
+function openTagPicker(opts) {
+  // opts: { state: Set<string>, photoCountFn?: (tag) => number,
+  //         title?: string, onChange?: () => void }
+  const modal   = document.getElementById("tagPickerOverlay");
+  const titleEl = document.getElementById("tagPickerTitle");
+  const searchEl= document.getElementById("tagPickerSearch");
+  const bodyEl  = document.getElementById("tagPickerBody");
+  const infoEl  = document.getElementById("tagPickerInfo");
+  const clearEl = document.getElementById("tagPickerClear");
+  const doneEl  = document.getElementById("tagPickerDone");
+  const closeEl = document.getElementById("tagPickerClose");
+
+  const selected = opts.state;
+  titleEl.textContent = opts.title || t("tagChipLabel");
+  searchEl.placeholder = t("tagPickerSearchPh");
+  clearEl.textContent  = t("tagPickerClearAll");
+  doneEl.textContent   = t("tagPickerDone");
+
+  bodyEl.innerHTML = "";
+  TAG_SECTIONS.forEach(section => {
+    const sec = document.createElement("div");
+    sec.className = "tpSection";
+    sec.dataset.id = section.id;
+    sec.innerHTML = `
+      <div class="tpSectionHead">
+        <span class="title">${escapeHtml(t(section.titleKey))}</span>
+        <span class="badge zero"></span>
+      </div>
+      <div class="tpGrid"></div>
+    `;
+    const grid = sec.querySelector(".tpGrid");
+    section.tags.forEach(name => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "tpPill " + section.cssCategory + (selected.has(name) ? " on" : "");
+      b.dataset.tag = name;
+      const count = opts.photoCountFn ? opts.photoCountFn(name) : 0;
+      b.innerHTML = `<span class="name">${escapeHtml(name)}</span>${count > 0 ? `<span class="ct">${count}</span>` : ""}`;
+      b.addEventListener("click", () => {
+        if (selected.has(name)) { selected.delete(name); b.classList.remove("on"); }
+        else                    { selected.add(name);    b.classList.add("on"); }
+        if (opts.onChange) opts.onChange();
+        updateUI();
+      });
+      grid.appendChild(b);
+    });
+    bodyEl.appendChild(sec);
+  });
+
+  function updateUI() {
+    let totalShown = 0;
+    bodyEl.querySelectorAll(".tpSection").forEach(sec => {
+      const onCount      = sec.querySelectorAll(".tpPill.on:not(.hidden)").length;
+      const visiblePills = sec.querySelectorAll(".tpPill:not(.hidden)").length;
+      const badge = sec.querySelector(".badge");
+      badge.textContent = onCount > 0 ? t("tagPickerOnBadge", onCount) : "";
+      badge.classList.toggle("zero", onCount === 0);
+      sec.classList.toggle("empty", visiblePills === 0);
+      totalShown += visiblePills;
+    });
+    infoEl.textContent = t("tagPickerInfo", selected.size, totalShown);
+  }
+
+  function applySearch(q) {
+    const query = (q || "").trim().toLowerCase();
+    bodyEl.querySelectorAll(".tpPill").forEach(p => {
+      const match = !query || p.dataset.tag.toLowerCase().includes(query);
+      p.classList.toggle("hidden", !match);
+    });
+    updateUI();
+  }
+
+  searchEl.value = "";
+  searchEl.oninput = (e) => applySearch(e.target.value);
+
+  clearEl.onclick = () => {
+    selected.clear();
+    bodyEl.querySelectorAll(".tpPill.on").forEach(p => p.classList.remove("on"));
+    if (opts.onChange) opts.onChange();
+    updateUI();
+  };
+  const close = () => {
+    if (opts.onChange) opts.onChange();
+    modal.classList.remove("show");
+  };
+  doneEl.onclick  = close;
+  closeEl.onclick = close;
+
+  applySearch("");
+  modal.classList.add("show");
+  // Auto-focus search after the overlay animates in.
+  setTimeout(() => { try { searchEl.focus(); } catch (_e) {} }, 120);
+}
+
+// Wire form chip
+document.getElementById("formTagChip").addEventListener("click", () => {
+  LOG("tagPicker.open", "form");
+  openTagPicker({
+    state: submissionTags,
+    photoCountFn: (tag) => stagedPhotos.filter(p => p.tags.has(tag)).length,
+    title: t("tagChipFormTitle"),
+    onChange: updateFormTagChipCount
+  });
+});
 
 // Multi-select level grid (compact pills, multi).
 function buildLevelGrid(gridId, levels) {
@@ -857,28 +1015,24 @@ function buildLevelGrid(gridId, levels) {
   };
 }
 
-let gwPicker, levelPicker, typePicker, inspPicker, tagPicker;
+let gwPicker, levelPicker, typePicker, inspPicker;
 function rebuildPills() {
   const prev = {
     gw: gwPicker?.get(),
     levels: levelPicker?.get() || [],
     type: typePicker?.get(),
     insp: inspPicker?.get(),
-    tags: tagPicker?.get() || []
   };
   gwPicker    = buildPills("gwRow",   GWS,   true, () => renderAutoInfo());
   levelPicker = buildLevelGrid("levelGrid", LEVELS);
   typePicker  = buildPills("typeRow", TYPES, true);
   inspPicker  = buildPills("inspRow", INSP,  true);
-  tagPicker   = buildTagPills("tagRow");
   if (prev.gw)   gwPicker.set(prev.gw);
   if (prev.levels.length) levelPicker.set(prev.levels);
   if (prev.type) typePicker.set(prev.type);
   if (prev.insp) inspPicker.set(prev.insp);
-  prev.tags.forEach(name => {
-    const btn = document.querySelector(`#tagRow .pill[data-val="${CSS.escape(name)}"]`);
-    if (btn) btn.click();
-  });
+  // Tag chip count is i18n-independent (numeric), but refresh it anyway in case.
+  updateFormTagChipCount();
 }
 
 // ============================================================
@@ -1101,8 +1255,11 @@ async function stageFile(file, source) {
     }
   }
   const id = uuid();
-  // Snapshot the current submission tags as this photo's starting tag set.
-  const initialTags = new Set(tagPicker?.get() || []);
+  // Snapshot the current submission-level tag set as this photo's starting
+  // tag set. Subsequent edits to submissionTags don't propagate to existing
+  // staged photos — the captain edits each photo's tags via the per-photo
+  // editor.
+  const initialTags = new Set(submissionTags);
   stagedPhotos.push({
     id,
     blob: file,
@@ -1150,20 +1307,17 @@ function openPhotoEditor(idx) {
   }
   document.getElementById("peDesc").value = p.description || "";
 
-  // Single tag list — freely add or remove.
-  const host = document.getElementById("peTagsRow");
-  host.innerHTML = "";
-  TAGS.forEach(tag => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "pill tag " + tag.category + (p.tags.has(tag.name) ? " on" : "");
-    b.textContent = tag.name;
-    b.addEventListener("click", () => {
-      if (p.tags.has(tag.name)) { p.tags.delete(tag.name); b.classList.remove("on"); }
-      else { p.tags.add(tag.name); b.classList.add("on"); }
+  // Tags chip — opens the picker modal scoped to this photo's tag set.
+  updatePeTagChipCount(p);
+  document.getElementById("peTagChip").onclick = () => {
+    LOG("tagPicker.open", "photo idx=" + idx);
+    openTagPicker({
+      state: p.tags,
+      photoCountFn: (tag) => stagedPhotos.filter(o => o !== p && o.tags.has(tag)).length,
+      title: t("tagChipPhotoTitle"),
+      onChange: () => updatePeTagChipCount(p)
     });
-    host.appendChild(b);
-  });
+  };
 
   document.getElementById("peOverlay").classList.add("show");
 }
@@ -1206,7 +1360,8 @@ function onFormChange() {
 }
 
 function clearForm() {
-  gwPicker.clear(); levelPicker.clear(); typePicker.clear(); inspPicker.clear(); tagPicker.clear();
+  gwPicker.clear(); levelPicker.clear(); typePicker.clear(); inspPicker.clear();
+  submissionTags.clear(); updateFormTagChipCount();
   document.getElementById("notes").value = "";
   document.getElementById("workDate").value = todayIso();
   stagedPhotos = [];
