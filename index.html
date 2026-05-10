@@ -332,6 +332,7 @@ const I18N = {
     typeInstallation: "Installation",
     typeWorkZone: "Zone de travail",
     typeInventory: "Inventaire",
+    typeWIR: "WIR",
     autoInfoCore: "Cœur",
     autoInfoMC: "Mât",
     autoInfoModules: "Module(s)",
@@ -399,6 +400,7 @@ const I18N = {
     typeInstallation: "Installation",
     typeWorkZone: "Work zone",
     typeInventory: "Inventory",
+    typeWIR: "WIR",
     autoInfoCore: "Core",
     autoInfoMC: "Mast Climber",
     autoInfoModules: "Module(s)",
@@ -491,7 +493,7 @@ const DB_NAME = "riviera-capture";
 const DB_VERSION = 1;
 const MAX_ATTEMPTS = 8;
 
-const GWS = ["GW1", "GW2", "GW3", "GW4"];
+const GWS = ["GW1", "GW2", "GW3", "GW4", "N-A"];
 const GW_DEFAULTS = {
   GW1: { core: "B", mast_climber: "MC7"  },
   GW2: { core: "B", mast_climber: "MC16" },
@@ -555,7 +557,8 @@ function modulesFor(gw, levels) {
 const TYPES = [
   { value: "Installation",    labelKey: "typeInstallation" },
   { value: "Zone de travail", labelKey: "typeWorkZone" },
-  { value: "Inventaire",      labelKey: "typeInventory" }
+  { value: "Inventaire",      labelKey: "typeInventory" },
+  { value: "WIR",             labelKey: "typeWIR" }
 ];
 const INSP = [
   { value: "false", labelKey: "inspNotReady" },
@@ -923,37 +926,89 @@ async function blobToImageThumb(blob, maxDim = 320) {
   bmp.close && bmp.close();
   return { url: canvas.toDataURL("image/jpeg", 0.6), srcWidth, srcHeight };
 }
+// Generic video placeholder (play-icon on dark) — used when frame extraction
+// fails. We never want a video to be lost because of a thumbnail problem.
+const VIDEO_PLACEHOLDER_DATA_URL = (() => {
+  const c = document.createElement("canvas");
+  c.width = 320; c.height = 320;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#0d3b29"; ctx.fillRect(0, 0, 320, 320);
+  ctx.fillStyle = "#3a8de8";
+  ctx.beginPath();
+  ctx.moveTo(120, 100); ctx.lineTo(120, 220); ctx.lineTo(220, 160); ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#7fb89c";
+  ctx.font = "bold 28px -apple-system,sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("VIDEO", 160, 270);
+  return c.toDataURL("image/jpeg", 0.7);
+})();
+
 async function blobToVideoThumb(blob, maxDim = 320) {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
-    video.preload = "metadata";
-    video.muted = true; video.playsInline = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute("muted", "");
+    video.setAttribute("playsinline", "");
+    video.preload = "auto";
+    // CRITICAL on iOS: append to DOM. Detached video elements often refuse
+    // to decode — readyState stays at 0 and no events ever fire.
+    video.style.cssText = "position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none";
+    document.body.appendChild(video);
+
     const url = URL.createObjectURL(blob);
     let done = false;
-    const fail = (msg) => { if (!done) { done = true; try { URL.revokeObjectURL(url); } catch (_) {} reject(new Error(msg)); } };
-    const ok = () => {
-      if (done) return; done = true;
+    const cleanup = () => {
+      try { URL.revokeObjectURL(url); } catch (_) {}
+      try { video.remove(); } catch (_) {}
+    };
+    const fail = (msg) => {
+      if (done) return;
+      done = true;
+      cleanup();
+      reject(new Error(msg));
+    };
+    const draw = () => {
+      if (done) return;
+      const srcWidth = video.videoWidth || 0, srcHeight = video.videoHeight || 0;
+      if (!srcWidth || !srcHeight) return; // not ready yet — let another event/timeout retry
+      done = true;
       try {
-        const srcWidth = video.videoWidth || 0, srcHeight = video.videoHeight || 0;
-        const scale = Math.min(1, maxDim / Math.max(srcWidth || 1, srcHeight || 1));
-        const w = Math.max(1, Math.round((srcWidth || maxDim) * scale));
-        const h = Math.max(1, Math.round((srcHeight || maxDim) * scale));
+        const scale = Math.min(1, maxDim / Math.max(srcWidth, srcHeight));
+        const w = Math.max(1, Math.round(srcWidth * scale));
+        const h = Math.max(1, Math.round(srcHeight * scale));
         const canvas = document.createElement("canvas");
         canvas.width = w; canvas.height = h;
         canvas.getContext("2d").drawImage(video, 0, 0, w, h);
-        try { URL.revokeObjectURL(url); } catch (_) {}
+        cleanup();
         resolve({ url: canvas.toDataURL("image/jpeg", 0.6), srcWidth, srcHeight });
-      } catch (e) { try { URL.revokeObjectURL(url); } catch (_) {} reject(e); }
+      } catch (e) { cleanup(); reject(e); }
     };
-    video.addEventListener("loadeddata", () => {
+
+    video.addEventListener("loadedmetadata", () => {
+      LOG("video.loadedmetadata", "dur=" + (video.duration || "?"), "dims=" + video.videoWidth + "x" + video.videoHeight);
       try { video.currentTime = Math.min(0.1, (video.duration || 1) / 4); }
-      catch (_e) { ok(); }
+      catch (_e) { setTimeout(draw, 200); }
     }, { once: true });
-    video.addEventListener("seeked", ok, { once: true });
-    video.addEventListener("error", () => fail("video load failed"), { once: true });
-    setTimeout(() => { if (!done && video.readyState >= 2) ok(); }, 1500);
-    setTimeout(() => fail("video thumb timeout"), 6000);
+    video.addEventListener("seeked",  () => { LOG("video.seeked");  draw(); }, { once: true });
+    video.addEventListener("canplay", () => { LOG("video.canplay"); if (!done && video.readyState >= 3) setTimeout(draw, 100); }, { once: true });
+    video.addEventListener("error", () => {
+      const err = video.error;
+      const code = err ? err.code : "?";
+      const msg  = err ? (err.message || "?") : "?";
+      fail("video element error code=" + code + " " + msg);
+    }, { once: true });
+
+    // Fallback A: 2 s after load — if dimensions are known, just draw
+    setTimeout(() => { if (!done && video.readyState >= 2 && video.videoWidth > 0) { LOG("video.fallback2s"); draw(); } }, 2000);
+    // Fallback B: 4 s — even with low readyState, attempt draw
+    setTimeout(() => { if (!done && video.videoWidth > 0) { LOG("video.fallback4s"); draw(); } }, 4000);
+    // Hard timeout
+    setTimeout(() => fail("video thumb timeout (8s, readyState=" + video.readyState + ", w=" + video.videoWidth + ")"), 8000);
+
     video.src = url;
+    try { video.load(); } catch (_e) {}
   });
 }
 
@@ -985,8 +1040,15 @@ async function stageFile(file, source) {
     LOG("thumb.ok", mediaKind, thumb.srcWidth + "x" + thumb.srcHeight);
   } catch (err) {
     LOG("err.thumb", mediaKind, err.message || String(err));
-    toast(t(mediaKind === "video" ? "toastVideoFail" : "toastReadFail", err.message || String(err)), true);
-    return;
+    if (mediaKind === "video") {
+      // Don't fail staging because the thumbnail failed — the video bytes
+      // are what matter. Use a generic placeholder; the video still uploads.
+      LOG("stage.videoFallback", "using generic placeholder");
+      thumb = { url: VIDEO_PLACEHOLDER_DATA_URL, srcWidth: 0, srcHeight: 0 };
+    } else {
+      toast(t("toastReadFail", err.message || String(err)), true);
+      return;
+    }
   }
   const id = uuid();
   // Snapshot the current submission tags as this photo's starting tag set.
