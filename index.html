@@ -97,6 +97,9 @@
   .qItem .status.done{background:#2a7c54;color:#fff}
   .qItem .status.error{background:#7a1f1f;color:#fff}
   .qItem .err{color:#ff9090;font-size:12px;margin-top:4px;word-break:break-all}
+  .qItem .progress{height:4px;background:#1f5a3f;border-radius:2px;margin-top:8px;overflow:hidden}
+  .qItem .progress .bar{height:100%;background:#3da774;transition:width .25s ease;width:0}
+  .qItem.uploading .progress .bar{background:#e6c089}
   .qItem .actions{display:flex;gap:8px;margin-top:8px}
   .qItem button{flex:1;background:#1f5a3f;color:#f1f3f0;border:1px solid #2a7c54;border-radius:6px;padding:8px;font-size:12px;cursor:pointer}
   .qItem button.danger{background:#5a1f1f;border-color:#7a2f2f}
@@ -235,6 +238,7 @@
     <button class="closeBtn" id="queueClose" type="button">×</button>
     <h3><span data-i18n="queueTitle">Upload queue</span> <span class="sub" id="queueSub"></span></h3>
     <div class="qToolbar">
+      <button type="button" id="qSyncBtn" data-i18n="queueSyncNow">↻ Sync now</button>
       <button type="button" id="qExportBtn" data-i18n="queueExport">⬇ Export pending to Files</button>
       <button type="button" id="qClearDoneBtn" data-i18n="queueClearDone">Clear completed</button>
     </div>
@@ -320,6 +324,9 @@ const I18N = {
     queueDiscard: "Annuler",
     queueExport: "⬇ Exporter en attente vers Fichiers",
     queueClearDone: "Effacer les terminés",
+    queueSyncNow: "↻ Synchroniser maintenant",
+    queueUploading: "envoi en cours…",
+    queueUploadProgress: (n, m) => "↑ " + n + "/" + m,
     queueExportEmpty: "Aucun fichier à exporter.",
     queueExportShared: "Sélectionne « Enregistrer dans Fichiers » dans le menu",
     queueExportDownloaded: n => `${n} fichier${n===1?"":"s"} téléchargé${n===1?"":"s"}.`,
@@ -388,6 +395,9 @@ const I18N = {
     queueDiscard: "Discard",
     queueExport: "⬇ Export pending to Files",
     queueClearDone: "Clear completed",
+    queueSyncNow: "↻ Sync now",
+    queueUploading: "uploading…",
+    queueUploadProgress: (n, m) => "↑ " + n + "/" + m,
     queueExportEmpty: "Nothing to export.",
     queueExportShared: "Pick \"Save to Files\" in the menu",
     queueExportDownloaded: n => `${n} file${n===1?"":"s"} downloaded.`,
@@ -1244,6 +1254,9 @@ async function requestBackgroundSync() {
 // ============================================================
 let _draining = false;
 let lastSyncAt = null;
+// While a submission is mid-upload, this holds {subId, photoIdx, photoTotal}
+// so the badge + queue panel can show "↑ 2/5" instead of just "uploading".
+let activeUpload = null;
 
 async function drainQueue() {
   if (_draining) return;
@@ -1264,6 +1277,7 @@ async function drainQueue() {
         sub.lastError = String(err.message || err);
         await dbPut(sub);
         LOG("err.upload", "id=" + sub.id.slice(0,8), "attempt=" + sub.attempts, sub.lastError);
+        activeUpload = null;
         renderQueueBadge(); renderQueueSheet();
         break;
       }
@@ -1277,6 +1291,8 @@ async function drainQueue() {
 async function uploadSubmission(sub) {
   sub.status = "uploading"; await dbPut(sub); renderQueueSheet();
   LOG("upload.start", "id=" + sub.id.slice(0,8));
+  activeUpload = { subId: sub.id, photoIdx: 0, photoTotal: sub.photos.length };
+  renderQueueBadge();
 
   if (!sub.parentIdServer) {
     const r = await fnCall({ mode: "createParent", parentFields: sub.parentFields });
@@ -1285,7 +1301,11 @@ async function uploadSubmission(sub) {
     await dbPut(sub);
   }
 
-  for (const photo of sub.photos) {
+  for (let i = 0; i < sub.photos.length; i++) {
+    const photo = sub.photos[i];
+    activeUpload.photoIdx = i + 1;
+    renderQueueBadge();
+    renderQueueSheet();
     if (photo.uploaded) continue;
 
     if (!photo.photoIdServer) {
@@ -1340,6 +1360,7 @@ async function uploadSubmission(sub) {
   sub.completedAt = new Date().toISOString();
   await dbPut(sub);
   LOG("upload.ok", "id=" + sub.id.slice(0,8));
+  activeUpload = null;
   // No auto-purge: done submissions persist until user clears them.
 }
 
@@ -1371,7 +1392,10 @@ async function renderQueueBadge() {
   const doneCount = all.filter(s => s.status === "done").length;
   badge.classList.toggle("has", pendingPhotos > 0 && errored === 0);
   badge.classList.toggle("error", errored > 0);
-  if (errored > 0) {
+  if (activeUpload) {
+    main.textContent = t("queueUploadProgress", activeUpload.photoIdx, activeUpload.photoTotal);
+    sub.textContent = t("queueUploading");
+  } else if (errored > 0) {
     main.textContent = "⚠️ " + t("queueErrors", errored);
     sub.textContent = pendingPhotos > 0 ? t("queuePending", pendingPhotos) : "";
   } else if (pendingPhotos > 0) {
@@ -1394,15 +1418,26 @@ async function renderQueueSheet() {
   list.innerHTML = "";
   all.forEach(s => {
     const div = document.createElement("div");
-    div.className = "qItem";
-    const photoSummary = `${s.photos.filter(p => p.uploaded).length}/${s.photos.length} files`;
+    div.className = "qItem" + (s.status === "uploading" ? " uploading" : "");
+    const uploadedN = s.photos.filter(p => p.uploaded).length;
+    const totalN = s.photos.length;
+    const photoSummary = `${uploadedN}/${totalN} files`;
     const meta = [s.parentFields.green_wall, s.parentFields.module_name, s.parentFields.type].filter(Boolean).join(" · ");
+    // Active upload? Use the live photoIdx (so the bar advances even before
+    // photo.uploaded flips, since there's a PUT mid-flight).
+    let pctNum = totalN > 0 ? Math.round((uploadedN / totalN) * 100) : 0;
+    if (activeUpload && activeUpload.subId === s.id) {
+      pctNum = totalN > 0 ? Math.round((activeUpload.photoIdx / totalN) * 100) : 0;
+    }
+    const showBar = s.status === "uploading" || (s.status === "done" && uploadedN > 0) ||
+                    (s.status !== "done" && uploadedN > 0);
     div.innerHTML = `
       <div class="qHead">
         <span>${escapeHtml(meta || "—")}</span>
         <span class="status ${s.status}">${s.status}</span>
       </div>
       <div>${photoSummary} · ${new Date(s.createdAt).toLocaleString()}</div>
+      ${showBar ? `<div class="progress"><div class="bar" style="width:${pctNum}%"></div></div>` : ""}
       ${s.lastError ? `<div class="err">${escapeHtml(s.lastError)}</div>` : ""}
       <div class="actions">
         ${s.status === "error" ? `<button data-act="retry" data-id="${s.id}">${t("queueRetry")}</button>` : ""}
@@ -1435,6 +1470,25 @@ document.getElementById("queueClose").addEventListener("click", () => {
 document.getElementById("qClearDoneBtn").addEventListener("click", async () => {
   const all = await dbAll();
   for (const s of all) if (s.status === "done") await dbDel(s.id);
+  renderQueueSheet(); renderQueueBadge();
+});
+document.getElementById("qSyncBtn").addEventListener("click", async () => {
+  LOG("manual.sync");
+  // Reset any "error" rows back to "queued" so the drain picks them up.
+  const all = await dbAll();
+  let reset = 0;
+  for (const s of all) {
+    if (s.status === "error") {
+      s.status = "queued"; s.lastError = null;
+      // Don't reset attempts to 0 — we still want the MAX_ATTEMPTS guard,
+      // but a manual press deserves a fresh try, so subtract one if maxed.
+      if (s.attempts >= MAX_ATTEMPTS) s.attempts = MAX_ATTEMPTS - 1;
+      await dbPut(s);
+      reset++;
+    }
+  }
+  LOG("manual.sync.reset", "errored=" + reset);
+  drainQueue();
   renderQueueSheet(); renderQueueBadge();
 });
 
