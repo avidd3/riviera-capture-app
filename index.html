@@ -50,6 +50,16 @@
   .tagChip .lbl{display:flex;align-items:center;gap:6px}
   .tagChip .ct{background:#2a7c54;color:#fff;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;font-variant-numeric:tabular-nums;min-width:24px;text-align:center}
   .tagChip .ct.zero{background:#1f5a3f;color:#7fb89c}
+  /* Selected-tags row (shown above the chip; tap a pill to deselect) */
+  .selectedTags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .selectedTags:empty{margin-bottom:0}
+  .selectedTagPill{display:inline-flex;align-items:center;gap:6px;background:#2a7c54;border:1px solid #3da774;color:#fff;padding:6px 4px 6px 11px;border-radius:999px;font:inherit;font-size:13px;cursor:pointer;line-height:1.2}
+  .selectedTagPill:active{background:#3da774}
+  .selectedTagPill .x{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;background:rgba(0,0,0,.28);border-radius:50%;font-size:12px;line-height:1;font-weight:700}
+  .selectedTagPill.planter{background:#5b4279;border-color:#9a7bc0}
+  .selectedTagPill.planter:active{background:#6b5289}
+  .selectedTagPill.status{background:#7a4500;border-color:#a05a00}
+  .selectedTagPill.status:active{background:#8a5510}
   .tpSearch{width:100%;padding:12px;background:#0d3b29;color:#f1f3f0;border:1px solid #2a7c54;border-radius:8px;font:inherit;font-size:16px;margin-bottom:14px}
   .tpSection{margin-bottom:18px}
   .tpSection.empty{display:none}
@@ -226,6 +236,7 @@
 <!-- 5. Tags (default for new photos, editable per-photo) -->
 <section>
   <h2><span data-i18n="sectionTags">Tags</span> <span class="hint" data-i18n="tagsHint">default for new photos · editable per-photo</span></h2>
+  <div class="selectedTags" id="formSelectedTags"></div>
   <button type="button" class="tagChip" id="formTagChip">
     <span class="lbl"><span>🏷</span> <span data-i18n="tagChipLabel">Tags</span></span>
     <span class="ct zero" id="formTagChipCount">0</span>
@@ -306,6 +317,7 @@
     </div>
     <div class="peField">
       <div class="lbl"><span data-i18n="photoTagsLabel">Tags for this file</span><span class="sub" data-i18n="photoTagsHint">add or remove freely</span></div>
+      <div class="selectedTags" id="peSelectedTags"></div>
       <button type="button" class="tagChip" id="peTagChip">
         <span class="lbl"><span>🏷</span> <span data-i18n="tagChipLabel">Tags</span></span>
         <span class="ct zero" id="peTagChipCount">0</span>
@@ -865,12 +877,52 @@ function updateFormTagChipCount() {
   if (!ct) return;
   ct.textContent = submissionTags.size;
   ct.classList.toggle("zero", submissionTags.size === 0);
+  renderFormSelectedTags();
 }
 function updatePeTagChipCount(p) {
   const ct = document.getElementById("peTagChipCount");
   if (!ct || !p) return;
   ct.textContent = p.tags.size;
   ct.classList.toggle("zero", p.tags.size === 0);
+  renderPeSelectedTags(p);
+}
+
+// Render the selected-tags row above each Tags chip. Tap any pill to remove
+// it from the underlying Set; the row + chip count refresh on the next
+// updateXxxTagChipCount() call (which we trigger here).
+function makeSelectedTagPill(name, cssCategory, onRemove) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "selectedTagPill " + (cssCategory || "");
+  b.innerHTML = `<span class="lbl">${escapeHtml(name)}</span><span class="x">×</span>`;
+  b.addEventListener("click", onRemove);
+  return b;
+}
+function renderFormSelectedTags() {
+  const host = document.getElementById("formSelectedTags");
+  if (!host) return;
+  host.innerHTML = "";
+  // Iterate TAG_SECTIONS so the rendered order is the canonical install
+  // sequence regardless of which order the captain selected the tags.
+  TAG_SECTIONS.forEach(s => s.tags.forEach(name => {
+    if (!submissionTags.has(name)) return;
+    host.appendChild(makeSelectedTagPill(name, s.cssCategory, () => {
+      submissionTags.delete(name);
+      updateFormTagChipCount();
+    }));
+  }));
+}
+function renderPeSelectedTags(p) {
+  const host = document.getElementById("peSelectedTags");
+  if (!host || !p) return;
+  host.innerHTML = "";
+  TAG_SECTIONS.forEach(s => s.tags.forEach(name => {
+    if (!p.tags.has(name)) return;
+    host.appendChild(makeSelectedTagPill(name, s.cssCategory, () => {
+      p.tags.delete(name);
+      updatePeTagChipCount(p);
+    }));
+  }));
 }
 
 // ============================================================
