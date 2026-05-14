@@ -667,14 +667,17 @@ const DB_NAME = "riviera-capture";
 const DB_VERSION = 1;
 const MAX_ATTEMPTS = 8;
 
-const GWS = ["GW1", "GW2", "GW3", "GW4", "N/A"];
+// Green wall values are stored WITH a space ("GW 1") to match the 455 legacy
+// AppSheet rows already in the DB. (An earlier build wrote "GW1" with no
+// space — those 5 stray rows were normalised on the server.)
+const GWS = ["GW 1", "GW 2", "GW 3", "GW 4", "N/A"];
 const GW_DEFAULTS = {
-  GW1: { core: "B", mast_climber: "MC7"  },
-  GW2: { core: "B", mast_climber: "MC16" },
-  GW3: { core: "A", mast_climber: "MC16" },
-  GW4: { core: "A", mast_climber: "MC15" }
+  "GW 1": { core: "B", mast_climber: "MC7"  },
+  "GW 2": { core: "B", mast_climber: "MC16" },
+  "GW 3": { core: "A", mast_climber: "MC16" },
+  "GW 4": { core: "A", mast_climber: "MC15" }
 };
-const GW_DIRECTION = { GW1: "NE", GW2: "NW", GW3: "SW", GW4: "SE" };
+const GW_DIRECTION = { "GW 1": "NE", "GW 2": "NW", "GW 3": "SW", "GW 4": "SE" };
 
 // Levels — sourced from Le Terrain variables list (2026-05-09).
 const LEVELS = (() => {
@@ -685,30 +688,30 @@ const LEVELS = (() => {
 })();
 
 // Module-name lookup. Pairing rules:
-//   GW1, GW4: odd-even pairs (01-02, 03-04, …, 49-50) + "O-00" at the bottom.
-//   GW2, GW3: even-odd pairs (00-01, 02-03, …, 48-49) + isolated "50" at top + "O" at bottom.
+//   GW 1, GW 4: odd-even pairs (01-02, 03-04, …, 49-50) + "O-00" at the bottom.
+//   GW 2, GW 3: even-odd pairs (00-01, 02-03, …, 48-49) + isolated "50" at top + "O" at bottom.
 function moduleNameFor(gw, level) {
   if (!gw || !level) return null;
   const dir = GW_DIRECTION[gw];
   if (!dir) return null;
   if (level === "LO") {
-    if (gw === "GW1" || gw === "GW4") return `${dir} | O-00`;
-    if (gw === "GW2" || gw === "GW3") return `${dir} | O`;
+    if (gw === "GW 1" || gw === "GW 4") return `${dir} | O-00`;
+    if (gw === "GW 2" || gw === "GW 3") return `${dir} | O`;
   }
   if (level === "L00") {
-    if (gw === "GW1" || gw === "GW4") return `${dir} | O-00`;
-    if (gw === "GW2" || gw === "GW3") return `${dir} | 00-01`;
+    if (gw === "GW 1" || gw === "GW 4") return `${dir} | O-00`;
+    if (gw === "GW 2" || gw === "GW 3") return `${dir} | 00-01`;
   }
   const m = level.match(/^L(\d+)$/);
   if (!m) return null; // P1, P2, C06 don't map to a module
   const n = parseInt(m[1], 10);
-  if (gw === "GW1" || gw === "GW4") {
+  if (gw === "GW 1" || gw === "GW 4") {
     if (n < 1 || n > 50) return null;
     const lower = n % 2 === 1 ? n : n - 1;
     const upper = lower + 1;
     return `${dir} | ${String(lower).padStart(2,"0")}-${String(upper).padStart(2,"0")}`;
   }
-  if (gw === "GW2" || gw === "GW3") {
+  if (gw === "GW 2" || gw === "GW 3") {
     if (n === 50) return `${dir} | 50`;
     if (n < 0 || n > 49) return null;
     const lower = n % 2 === 0 ? n : n - 1;
