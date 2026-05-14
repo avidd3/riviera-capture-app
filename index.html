@@ -665,7 +665,13 @@ const SUPABASE_URL = "https://aqcbovokukjafftniunh.supabase.co";
 const FUNCTION_URL = SUPABASE_URL + "/functions/v1/riviera-write";
 const DB_NAME = "riviera-capture";
 const DB_VERSION = 1;
-const MAX_ATTEMPTS = 8;
+// Auto-drain stops retrying a row after this many consecutive failures.
+// Manual "Retry" / "Sync now" resets attempts to 0, so nothing is ever
+// permanently stuck — it just stops the background loop from hammering a
+// genuinely-broken submission forever.
+const MAX_AUTO_ATTEMPTS = 20;
+const FN_TIMEOUT_MS  = 30000;   // edge-function calls (small JSON)
+const PUT_TIMEOUT_MS = 150000;  // storage PUT of a multi-MB photo/video on slow 4G
 
 // Green wall values are stored WITH a space ("GW 1") to match the 455 legacy
 // AppSheet rows already in the DB. (An earlier build wrote "GW1" with no
@@ -1588,46 +1594,96 @@ let lastSyncAt = null;
 // so the badge + queue panel can show "↑ 2/5" instead of just "uploading".
 let activeUpload = null;
 
+// fetch() with a hard timeout. Without this, iOS Safari leaves a stalled
+// request pending forever — which is exactly what stranded submissions at
+// "uploading" with no progress on a flaky network.
+async function fetchWithTimeout(url, opts, timeoutMs, label) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } catch (e) {
+    if (e && e.name === "AbortError") {
+      throw new Error((label || "request") + " timed out after " + Math.round(timeoutMs / 1000) + "s");
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Any submission left at status "uploading" is ORPHANED — the app was killed
+// or suspended by iOS mid-upload. drainQueue's _draining guard means nothing
+// is genuinely uploading when this runs, so it's always safe to reset them
+// back to "queued" so the drain picks them up again. This is the fix for
+// submissions stuck at "0/7 UPLOADING" for an hour.
+async function reclaimOrphanedUploads() {
+  const all = await dbAll();
+  let n = 0;
+  for (const s of all) {
+    if (s.status === "uploading") {
+      s.status = "queued";
+      await dbPut(s);
+      n++;
+    }
+  }
+  if (n) LOG("recover.orphans", "count=" + n);
+  return n;
+}
+
 async function drainQueue() {
   if (_draining) return;
   if (!navigator.onLine) { renderQueueBadge(); return; }
   _draining = true;
   try {
+    await reclaimOrphanedUploads();
     const all = await dbAll();
-    const pending = all.filter(s => s.status === "queued" || s.status === "error")
-                       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    // Least-failed first, then oldest first. Auto-drain skips rows past
+    // MAX_AUTO_ATTEMPTS so a genuinely-broken submission doesn't get
+    // hammered forever — manual Retry / Sync now clears that.
+    const pending = all
+      .filter(s => (s.status === "queued" || s.status === "error")
+                && (s.attempts || 0) < MAX_AUTO_ATTEMPTS)
+      .sort((a, b) => ((a.attempts || 0) - (b.attempts || 0)) || a.createdAt.localeCompare(b.createdAt));
+    let consecutiveFails = 0;
     for (const sub of pending) {
-      if (sub.attempts >= MAX_ATTEMPTS) continue;
       try {
         await uploadSubmission(sub);
+        consecutiveFails = 0;
         lastSyncAt = new Date();
       } catch (err) {
-        sub.attempts++;
+        sub.attempts = (sub.attempts || 0) + 1;
         sub.status = "error";
         sub.lastError = String(err.message || err);
         await dbPut(sub);
         LOG("err.upload", "id=" + sub.id.slice(0,8), "attempt=" + sub.attempts, sub.lastError);
         activeUpload = null;
         renderQueueBadge(); renderQueueSheet();
-        break;
+        consecutiveFails++;
+        // One bad submission no longer blocks the rest — we move on. But if
+        // several fail back-to-back the network is probably down, so stop
+        // and let the periodic drain / online event retry later.
+        if (consecutiveFails >= 3) {
+          LOG("drain.abort", "consecutiveFails=" + consecutiveFails);
+          break;
+        }
       }
     }
   } finally {
     _draining = false;
+    activeUpload = null;
     renderQueueBadge(); renderQueueSheet();
   }
 }
 
 async function uploadSubmission(sub) {
   sub.status = "uploading"; await dbPut(sub); renderQueueSheet();
-  LOG("upload.start", "id=" + sub.id.slice(0,8));
+  LOG("upload.start", "id=" + sub.id.slice(0,8), "photos=" + sub.photos.length);
   activeUpload = { subId: sub.id, photoIdx: 0, photoTotal: sub.photos.length };
   renderQueueBadge();
 
   if (!sub.parentIdServer) {
     // clientSubmissionId = sub.id makes createParent idempotent on the server.
-    // If a previous attempt's response was lost in transit, the server returns
-    // the same parentId instead of inserting a duplicate row.
     const r = await fnCall({
       mode: "createParent",
       clientSubmissionId: sub.id,
@@ -1646,37 +1702,37 @@ async function uploadSubmission(sub) {
     renderQueueSheet();
     if (photo.uploaded) continue;
 
-    if (!photo.photoIdServer) {
-      // clientPhotoId = photo.id makes createPhoto idempotent on the server.
-      // Same lost-response defence as createParent above.
-      const r = await fnCall({
-        mode: "createPhoto",
-        parentId: sub.parentIdServer,
-        clientPhotoId: photo.id,
-        photoFields: {
-          captured_at: photo.captured_at,
-          width_px: photo.width,
-          height_px: photo.height,
-          bytes: photo.bytes,
-          mime: photo.mime,
-          filename_original: photo.filenameOriginal,
-          description: photo.description,
-        }
-      });
-      if (!r.ok) throw new Error(r.error || "createPhoto failed");
-      photo.photoIdServer = r.photoId;
-      photo.signedUrl = r.signedUrl;
-      photo.signedToken = r.signedToken;
-      photo.storagePath = r.storagePath;
-      if (r.idempotent) LOG("upload.photo.idempotent", "id=" + photo.id.slice(0,8));
-      await dbPut(sub);
-    }
-
-    const putRes = await fetch(photo.signedUrl, {
-      method: "PUT",
-      headers: { "Content-Type": photo.mime || "image/jpeg", "x-upsert": "false" },
-      body: photo.blob,
+    // ALWAYS call createPhoto. It's idempotent on clientPhotoId, so a retry
+    // returns the SAME photo row — but ALWAYS with a FRESH signed-upload URL.
+    // Reusing a stored signedUrl was the "Load failed" bug: signed URLs
+    // expire, and a queued submission can sit for days before it drains.
+    const r = await fnCall({
+      mode: "createPhoto",
+      parentId: sub.parentIdServer,
+      clientPhotoId: photo.id,
+      photoFields: {
+        captured_at: photo.captured_at,
+        width_px: photo.width,
+        height_px: photo.height,
+        bytes: photo.bytes,
+        mime: photo.mime,
+        filename_original: photo.filenameOriginal,
+        description: photo.description,
+      }
     });
+    if (!r.ok) throw new Error(r.error || "createPhoto failed");
+    photo.photoIdServer = r.photoId;
+    photo.storagePath = r.storagePath;
+    if (r.idempotent) LOG("upload.photo.idempotent", "id=" + photo.id.slice(0,8));
+    await dbPut(sub);
+
+    if (!photo.blob) throw new Error("photo blob missing (id " + (photo.id || "?").slice(0, 8) + ") — was the submission edited after a partial upload?");
+
+    const putRes = await fetchWithTimeout(r.signedUrl, {
+      method: "PUT",
+      headers: { "Content-Type": photo.mime || "image/jpeg" },
+      body: photo.blob,
+    }, PUT_TIMEOUT_MS, "photo upload");
     if (!putRes.ok) {
       const txt = await putRes.text().catch(() => "");
       throw new Error("storage PUT " + putRes.status + ": " + txt.slice(0, 200));
@@ -1696,6 +1752,7 @@ async function uploadSubmission(sub) {
     photo.uploaded = true;
     photo.blob = null; // drop heavy blob from persisted record
     await dbPut(sub);
+    LOG("upload.photo.ok", "id=" + sub.id.slice(0,8), (i + 1) + "/" + sub.photos.length);
   }
 
   sub.status = "done";
@@ -1707,11 +1764,11 @@ async function uploadSubmission(sub) {
 }
 
 async function fnCall(body) {
-  const res = await fetch(FUNCTION_URL, {
+  const res = await fetchWithTimeout(FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ captainToken: CAPTAIN_TOKEN, ...body }),
-  });
+  }, FN_TIMEOUT_MS, "server call");
   let json;
   try { json = await res.json(); } catch (_e) {
     throw new Error("non-JSON response: HTTP " + res.status);
@@ -1858,7 +1915,9 @@ async function openSubmissionDetail(id) {
     retryBtn.textContent = t("sdRetry");
     retryBtn.addEventListener("click", async () => {
       const s = await dbGet(sub.id);
-      if (s) { s.status = "queued"; s.lastError = null; if (s.attempts >= MAX_ATTEMPTS) s.attempts = MAX_ATTEMPTS - 1; await dbPut(s); }
+      // Manual retry fully resets the counter so the auto-drain picks it up
+      // again even if it had hit MAX_AUTO_ATTEMPTS.
+      if (s) { s.status = "queued"; s.lastError = null; s.attempts = 0; await dbPut(s); }
       document.getElementById("submissionDetailOverlay").classList.remove("show");
       drainQueue();
     });
@@ -1968,15 +2027,15 @@ document.getElementById("qClearDoneBtn").addEventListener("click", async () => {
 });
 document.getElementById("qSyncBtn").addEventListener("click", async () => {
   LOG("manual.sync");
-  // Reset any "error" rows back to "queued" so the drain picks them up.
+  // Reset every "error" row back to "queued" with a clean attempts counter,
+  // and reclaim any orphaned "uploading" rows, so a manual press always
+  // gives everything a fresh shot.
+  await reclaimOrphanedUploads();
   const all = await dbAll();
   let reset = 0;
   for (const s of all) {
     if (s.status === "error") {
-      s.status = "queued"; s.lastError = null;
-      // Don't reset attempts to 0 — we still want the MAX_ATTEMPTS guard,
-      // but a manual press deserves a fresh try, so subtract one if maxed.
-      if (s.attempts >= MAX_ATTEMPTS) s.attempts = MAX_ATTEMPTS - 1;
+      s.status = "queued"; s.lastError = null; s.attempts = 0;
       await dbPut(s);
       reset++;
     }
@@ -2095,6 +2154,14 @@ document.addEventListener("visibilitychange", () => {
   if (!document.hidden && navigator.onLine) drainQueue();
 });
 
+// Periodic auto-drain: every 45 s, if we're online and not already draining,
+// take another pass. This is what eventually clears errored rows without the
+// captain having to touch "Sync now" — and it re-attempts anything that
+// failed earlier in the session once the network recovers.
+setInterval(() => {
+  if (navigator.onLine && !_draining) drainQueue();
+}, 45000);
+
 (function initCaptainName(){
   const stored = getCaptainEmail();
   document.getElementById("captainName").textContent = stored || ("captain ••" + CAPTAIN_TOKEN.slice(-4));
@@ -2123,7 +2190,10 @@ document.getElementById("workDate").value = todayIso();
 document.querySelectorAll(".langBtn").forEach(b => b.classList.toggle("on", b.dataset.lang === LANG));
 onFormChange();
 updateNet();
-renderQueueBadge();
+// Reclaim orphaned "uploading" rows at boot even if we're offline — so the
+// queue badge + panel show them as "queued" (recoverable) rather than
+// stranded at "uploading", and the next online event drains them.
+reclaimOrphanedUploads().then(() => { renderQueueBadge(); renderQueueSheet(); });
 drainQueue();
 </script>
 
