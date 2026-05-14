@@ -664,7 +664,7 @@ window.addEventListener("unhandledrejection", e => {
 const SUPABASE_URL = "https://aqcbovokukjafftniunh.supabase.co";
 const FUNCTION_URL = SUPABASE_URL + "/functions/v1/riviera-write";
 const DB_NAME = "riviera-capture";
-const DB_VERSION = 1;
+const DB_VERSION = 2; // v2: separate `blobs` store — photo bytes out of the submission record
 // Auto-drain stops retrying a row after this many consecutive failures.
 // Manual "Retry" / "Sync now" resets attempts to 0, so nothing is ever
 // permanently stuck — it just stops the background loop from hammering a
@@ -859,6 +859,17 @@ LOG("boot", "lang=" + LANG, "tokenSuffix=" + CAPTAIN_TOKEN.slice(-4));
 // ============================================================
 // IndexedDB
 // ============================================================
+// Two object stores:
+//   submissions — METADATA ONLY. Small. Rewritten often (after each photo
+//                 uploads). Must never contain photo bytes.
+//   blobs       — { id: photoId, data: ArrayBuffer }. The actual photo/video
+//                 bytes. Written once at submit, read once at upload, deleted
+//                 once uploaded.
+// Why: v1 stored each photo's 3-4 MB blob INSIDE the submission record, and
+// dbPut(sub) re-serialised every remaining blob (~25 MB) twice per photo.
+// iOS Safari's IndexedDB hangs hard on repeated large-blob writes — that was
+// the "stuck at uploading, no timeout fires" bug. Metadata-only dbPut is fast
+// and reliable; bytes live in `blobs`, touched exactly once each.
 let _db;
 function openDb() {
   if (_db) return Promise.resolve(_db);
@@ -869,40 +880,150 @@ function openDb() {
       if (!db.objectStoreNames.contains("submissions")) {
         db.createObjectStore("submissions", { keyPath: "id" });
       }
+      if (!db.objectStoreNames.contains("blobs")) {
+        db.createObjectStore("blobs", { keyPath: "id" }); // id = photo.id
+      }
     };
     r.onsuccess = () => { _db = r.result; res(_db); };
     r.onerror = () => rej(r.error);
+    r.onblocked = () => rej(new Error("IndexedDB upgrade blocked — close other Riviera Capture tabs"));
   });
 }
+
+// Hard timeout around every IndexedDB operation. iOS can leave a transaction
+// pending forever; without this, an `await dbPut(...)` froze the whole drain.
+// A timed-out IDB op is tagged .network so the drain treats it as a transient
+// "still waiting", not a real failure that burns the retry budget.
+function withIdbTimeout(promise, label, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, rej) => setTimeout(() => {
+      const e = new Error("local storage " + (label || "op") + " timed out (" + (ms || 20000) + "ms)");
+      e.network = true;
+      rej(e);
+    }, ms || 20000)),
+  ]);
+}
+
 async function dbPut(sub) {
   const db = await openDb();
-  return new Promise((res, rej) => {
+  return withIdbTimeout(new Promise((res, rej) => {
     const tx = db.transaction("submissions", "readwrite");
     tx.objectStore("submissions").put(sub);
-    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
-  });
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+  }), "dbPut");
 }
 async function dbGet(id) {
   const db = await openDb();
-  return new Promise((res, rej) => {
+  return withIdbTimeout(new Promise((res, rej) => {
     const r = db.transaction("submissions").objectStore("submissions").get(id);
     r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
-  });
+  }), "dbGet");
 }
 async function dbAll() {
   const db = await openDb();
-  return new Promise((res, rej) => {
+  return withIdbTimeout(new Promise((res, rej) => {
     const r = db.transaction("submissions").objectStore("submissions").getAll();
     r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error);
-  });
+  }), "dbAll");
 }
 async function dbDel(id) {
   const db = await openDb();
-  return new Promise((res, rej) => {
+  return withIdbTimeout(new Promise((res, rej) => {
     const tx = db.transaction("submissions", "readwrite");
     tx.objectStore("submissions").delete(id);
-    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
-  });
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+  }), "dbDel");
+}
+
+// --- blobs store: photo/video bytes as ArrayBuffer, keyed by photo.id ---
+async function blobPut(photoId, arrayBuffer) {
+  const db = await openDb();
+  return withIdbTimeout(new Promise((res, rej) => {
+    const tx = db.transaction("blobs", "readwrite");
+    tx.objectStore("blobs").put({ id: photoId, data: arrayBuffer });
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+  }), "blobPut", 45000); // bigger window — this is the one genuinely large write
+}
+async function blobGet(photoId) {
+  const db = await openDb();
+  return withIdbTimeout(new Promise((res, rej) => {
+    const r = db.transaction("blobs").objectStore("blobs").get(photoId);
+    r.onsuccess = () => res(r.result ? r.result.data : null);
+    r.onerror = () => rej(r.error);
+  }), "blobGet", 45000);
+}
+async function blobDel(photoId) {
+  const db = await openDb();
+  return withIdbTimeout(new Promise((res, rej) => {
+    const tx = db.transaction("blobs", "readwrite");
+    tx.objectStore("blobs").delete(photoId);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+  }), "blobDel");
+}
+async function blobAllKeys() {
+  const db = await openDb();
+  return withIdbTimeout(new Promise((res, rej) => {
+    const r = db.transaction("blobs").objectStore("blobs").getAllKeys();
+    r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error);
+  }), "blobAllKeys");
+}
+
+// One-time migration: v1 submissions stored each photo's blob INLINE in the
+// record. Move those bytes into the `blobs` store and strip them from the
+// submission record, so the record is small and dbPut stops hanging. Runs at
+// boot; safe to run repeatedly (skips records already migrated).
+async function migrateV1InlineBlobs() {
+  let subs;
+  try { subs = await dbAll(); } catch (_e) { return; }
+  for (const s of subs) {
+    let changed = false;
+    for (const p of (s.photos || [])) {
+      if (p && p.blob) {
+        try {
+          // Guard the conversion: a "lost" iOS blob can hang .arrayBuffer().
+          const ab = await Promise.race([
+            p.blob.arrayBuffer(),
+            new Promise((_, rej) => setTimeout(() => rej(new Error("arrayBuffer timeout")), 20000)),
+          ]);
+          await blobPut(p.id, ab);
+          p.blob = null; // strip inline blob from the metadata record
+          changed = true;
+        } catch (e) {
+          // Blob unreadable (iOS lost it) — drop the reference anyway so the
+          // record can be saved small. The photo will fail upload with a
+          // clear "bytes missing" error the captain can act on.
+          p.blob = null;
+          changed = true;
+          LOG("err.migrate", "id=" + (s.id || "?").slice(0, 8), "photo=" + (p.id || "?").slice(0, 8), String(e.message || e));
+        }
+      }
+    }
+    if (changed) {
+      try { await dbPut(s); LOG("migrate.v1", "id=" + s.id.slice(0, 8)); }
+      catch (e) { LOG("err.migrate.dbPut", String(e.message || e)); }
+    }
+  }
+}
+
+// Delete blob entries that nothing still needs locally:
+//   - bytes orphaned if the app was killed between blobPut and dbPut at submit
+//   - bytes of already-uploaded photos (they're safe on the server now;
+//     blobDel after a successful upload may have been interrupted)
+// Only NOT-yet-uploaded photos keep their local bytes.
+async function sweepOrphanBlobs() {
+  let subs, keys;
+  try { subs = await dbAll(); keys = await blobAllKeys(); }
+  catch (_e) { return; }
+  const stillNeeded = new Set();
+  for (const s of subs) for (const p of (s.photos || [])) {
+    if (!p.uploaded) stillNeeded.add(p.id);
+  }
+  let n = 0;
+  for (const k of keys) {
+    if (!stillNeeded.has(k)) { try { await blobDel(k); n++; } catch (_e) {} }
+  }
+  if (n) LOG("sweep.orphanBlobs", "deleted=" + n);
 }
 
 // ============================================================
@@ -1430,13 +1551,15 @@ function openPhotoEditor(idx) {
   const preview = document.getElementById("pePreview");
   preview.innerHTML = "";
   if (editorPreviewObjectUrl) { try { URL.revokeObjectURL(editorPreviewObjectUrl); } catch (_) {} editorPreviewObjectUrl = null; }
-  if (p.mediaKind === "video") {
+  if (p.mediaKind === "video" && p.blob) {
     const v = document.createElement("video");
     editorPreviewObjectUrl = URL.createObjectURL(p.blob);
     v.src = editorPreviewObjectUrl;
     v.controls = true; v.playsInline = true;
     preview.appendChild(v);
   } else {
+    // Image, or a video whose in-memory blob isn't loaded — fall back to the
+    // stored thumbnail (still informative; the bytes are safe in the store).
     const img = document.createElement("img");
     img.src = p.thumbDataUrl;
     preview.appendChild(img);
@@ -1534,14 +1657,15 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
       date_de_travail: workDate,
       capture_device: navigator.userAgent.slice(0, 200),
     },
+    // NOTE: no `blob` here — photo bytes go into the separate `blobs` store,
+    // keyed by photo.id. The submission record stays small so dbPut is fast.
     photos: stagedPhotos.map(p => ({
-      id: p.id, blob: p.blob, mime: p.mime, mediaKind: p.mediaKind,
+      id: p.id, mime: p.mime, mediaKind: p.mediaKind,
       width: p.width, height: p.height, bytes: p.bytes,
       captured_at: p.captured_at,
       filenameOriginal: p.filenameOriginal,
-      // thumbDataUrl persists to IDB so the history detail view can render
-      // thumbnails without re-extracting from the blob (especially relevant
-      // for video, where extraction is async and can fail).
+      // thumbDataUrl persists so the history detail view can render
+      // thumbnails without re-extracting from the blob.
       thumbDataUrl: p.thumbDataUrl,
       description: p.description || null,
       tags: Array.from(p.tags || []),
@@ -1564,10 +1688,17 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
   } catch (_e) { /* skip silently */ }
 
   try {
+    // Write each photo's bytes to the `blobs` store FIRST (one ArrayBuffer
+    // per photo), THEN the small metadata record. If the app dies between
+    // the two, sweepOrphanBlobs() cleans up the unreferenced bytes at boot.
+    for (const p of stagedPhotos) {
+      const ab = await p.blob.arrayBuffer();
+      await blobPut(p.id, ab);
+    }
     await dbPut(sub);
-    LOG("submit.saved", "id=" + sub.id.slice(0,8));
+    LOG("submit.saved", "id=" + sub.id.slice(0,8), "photos=" + sub.photos.length);
   } catch (e) {
-    LOG("err.submit.dbPut", e.message || String(e));
+    LOG("err.submit.save", e.message || String(e));
     toast("Save failed: " + (e.message || e), true);
     return;
   }
@@ -1748,12 +1879,20 @@ async function uploadSubmission(sub) {
     if (r.idempotent) LOG("upload.photo.idempotent", "id=" + photo.id.slice(0,8));
     await dbPut(sub);
 
-    if (!photo.blob) throw new Error("photo blob missing (id " + (photo.id || "?").slice(0, 8) + ") — was the submission edited after a partial upload?");
+    // Photo bytes: v2 keeps them in the `blobs` store keyed by photo.id.
+    // (`photo.blob` is the legacy v1 inline path — migrateV1InlineBlobs
+    // moves those out at boot, but keep the fallback just in case.)
+    let bytes = photo.blob || null;
+    if (!bytes) {
+      const ab = await blobGet(photo.id);
+      if (ab) bytes = new Blob([ab], { type: photo.mime || "application/octet-stream" });
+    }
+    if (!bytes) throw new Error("photo bytes missing from local store (id " + (photo.id || "?").slice(0, 8) + ") — re-capture this photo");
 
     const putRes = await fetchWithTimeout(r.signedUrl, {
       method: "PUT",
       headers: { "Content-Type": photo.mime || "image/jpeg" },
-      body: photo.blob,
+      body: bytes,
     }, PUT_TIMEOUT_MS, "photo upload");
     if (!putRes.ok) {
       const txt = await putRes.text().catch(() => "");
@@ -1777,8 +1916,9 @@ async function uploadSubmission(sub) {
     if (!fin.ok) throw new Error(fin.error || "finalizePhoto failed");
 
     photo.uploaded = true;
-    photo.blob = null; // drop heavy blob from persisted record
-    await dbPut(sub);
+    photo.blob = null; // (legacy v1 field — clear it if it was somehow still set)
+    await dbPut(sub);                       // small metadata write
+    await blobDel(photo.id).catch(() => {}); // bytes no longer needed locally
     LOG("upload.photo.ok", "id=" + sub.id.slice(0,8), (i + 1) + "/" + sub.photos.length);
   }
 
@@ -1966,6 +2106,8 @@ async function openSubmissionDetail(id) {
     discardBtn.textContent = t("sdDiscard");
     discardBtn.addEventListener("click", async () => {
       if (!confirm(t("sdConfirmDiscard"))) return;
+      const s = await dbGet(sub.id);
+      if (s) for (const p of (s.photos || [])) await blobDel(p.id).catch(() => {});
       await dbDel(sub.id);
       document.getElementById("submissionDetailOverlay").classList.remove("show");
       renderQueueSheet(); renderQueueBadge();
@@ -2014,27 +2156,38 @@ async function editSubmissionInForm(sub) {
   const seen = new Set();
   sub.photos.forEach(p => (p.tags || []).forEach(name => { if (!seen.has(name)) { seen.add(name); submissionTags.add(name); } }));
 
-  // Restore staged photos from the submission's photo list.
-  stagedPhotos = sub.photos.map(p => ({
-    id: p.id || uuid(),
-    blob: p.blob,                      // null if uploaded — but we only get
-                                       // here when nothing's uploaded yet
-    mime: p.mime,
-    mediaKind: p.mediaKind || (p.mime && p.mime.startsWith("video/") ? "video" : "image"),
-    width: p.width || 0,
-    height: p.height || 0,
-    bytes: p.bytes || 0,
-    captured_at: p.captured_at || new Date().toISOString(),
-    thumbDataUrl: p.thumbDataUrl || VIDEO_PLACEHOLDER_DATA_URL,
-    filenameOriginal: p.filenameOriginal || null,
-    source: p.source || "upload",
-    description: p.description || "",
-    tags: new Set(p.tags || [])
-  }));
+  // Restore staged photos from the submission's photo list. Photo bytes live
+  // in the `blobs` store now (v2) — pull each one back and rebuild an
+  // in-memory Blob for the editing session. (p.blob is the legacy v1
+  // inline fallback.)
+  stagedPhotos = [];
+  for (const p of sub.photos) {
+    let blob = p.blob || null;
+    if (!blob) {
+      const ab = await blobGet(p.id);
+      if (ab) blob = new Blob([ab], { type: p.mime || "application/octet-stream" });
+    }
+    stagedPhotos.push({
+      id: p.id || uuid(),
+      blob,
+      mime: p.mime,
+      mediaKind: p.mediaKind || (p.mime && p.mime.startsWith("video/") ? "video" : "image"),
+      width: p.width || 0,
+      height: p.height || 0,
+      bytes: p.bytes || 0,
+      captured_at: p.captured_at || new Date().toISOString(),
+      thumbDataUrl: p.thumbDataUrl || VIDEO_PLACEHOLDER_DATA_URL,
+      filenameOriginal: p.filenameOriginal || null,
+      source: p.source || "upload",
+      description: p.description || "",
+      tags: new Set(p.tags || [])
+    });
+  }
 
   // Delete the original so save creates a fresh submission with a new
   // client_submission_id (avoiding any chance of double-upload if drain
-  // raced with us).
+  // raced with us). The `blobs` entries stay — submit() re-writes them
+  // under the same photo ids; anything left unreferenced is swept at boot.
   await dbDel(sub.id);
   LOG("submission.editLoaded", "from=" + sub.id.slice(0,8), "photos=" + stagedPhotos.length);
 
@@ -2059,7 +2212,12 @@ document.getElementById("queueClose").addEventListener("click", () => {
 });
 document.getElementById("qClearDoneBtn").addEventListener("click", async () => {
   const all = await dbAll();
-  for (const s of all) if (s.status === "done") await dbDel(s.id);
+  for (const s of all) if (s.status === "done") {
+    // Bytes were already blobDel'd per-photo on upload success — this is just
+    // belt-and-suspenders in case any slipped through.
+    for (const p of (s.photos || [])) await blobDel(p.id).catch(() => {});
+    await dbDel(s.id);
+  }
   renderQueueSheet(); renderQueueBadge();
 });
 document.getElementById("qSyncBtn").addEventListener("click", async () => {
@@ -2091,11 +2249,19 @@ async function exportQueuedFiles() {
   for (const s of all) {
     if (s.status === "done") continue;
     for (const p of s.photos) {
-      if (p.uploaded || !p.blob) continue;
+      if (p.uploaded) continue;
+      // Bytes live in the `blobs` store now (v2). p.blob is the legacy v1
+      // inline fallback.
+      let bytes = p.blob || null;
+      if (!bytes) {
+        const ab = await blobGet(p.id).catch(() => null);
+        if (ab) bytes = new Blob([ab], { type: p.mime || "application/octet-stream" });
+      }
+      if (!bytes) continue;
       const ext = p.mediaKind === "video" ? ".mp4" : ".jpg";
       const tag = [s.parentFields.green_wall, (s.parentFields.module_name || "").replace(/\s*\|\s*/, "-")].filter(Boolean).join("_") || "RIV";
       const name = `${tag}_${s.id.slice(0,6)}_${p.id.slice(0,6)}${ext}`;
-      files.push(new File([p.blob], name, { type: p.mime || "application/octet-stream" }));
+      files.push(new File([bytes], name, { type: p.mime || "application/octet-stream" }));
     }
   }
   LOG("export.start", "files=" + files.length);
@@ -2227,11 +2393,21 @@ document.getElementById("workDate").value = todayIso();
 document.querySelectorAll(".langBtn").forEach(b => b.classList.toggle("on", b.dataset.lang === LANG));
 onFormChange();
 updateNet();
-// Reclaim orphaned "uploading" rows at boot even if we're offline — so the
-// queue badge + panel show them as "queued" (recoverable) rather than
-// stranded at "uploading", and the next online event drains them.
-reclaimOrphanedUploads().then(() => { renderQueueBadge(); renderQueueSheet(); });
-drainQueue();
+
+// Boot-time IndexedDB housekeeping, in order:
+//   1. migrateV1InlineBlobs — move any v1 inline photo blobs into the new
+//      `blobs` store so the submission records become small (this is what
+//      un-sticks the existing frozen submissions).
+//   2. reclaimOrphanedUploads — reset any "uploading" rows to "queued".
+//   3. sweepOrphanBlobs — drop blob bytes no submission references anymore.
+// Then kick the drain. Runs even offline so the queue UI is accurate.
+(async () => {
+  try { await migrateV1InlineBlobs(); } catch (e) { LOG("err.boot.migrate", String(e.message || e)); }
+  try { await reclaimOrphanedUploads(); } catch (e) { LOG("err.boot.reclaim", String(e.message || e)); }
+  try { await sweepOrphanBlobs(); } catch (e) { LOG("err.boot.sweep", String(e.message || e)); }
+  renderQueueBadge(); renderQueueSheet();
+  drainQueue();
+})();
 </script>
 
 </body>
