@@ -1603,10 +1603,17 @@ async function fetchWithTimeout(url, opts, timeoutMs, label) {
   try {
     return await fetch(url, { ...opts, signal: ctrl.signal });
   } catch (e) {
-    if (e && e.name === "AbortError") {
-      throw new Error((label || "request") + " timed out after " + Math.round(timeoutMs / 1000) + "s");
-    }
-    throw e;
+    // Both a timeout (AbortError) and a plain fetch rejection ("Load failed"
+    // / TypeError) mean we couldn't reach the server. Tag the error as
+    // .network so the drain treats it as "still waiting", NOT a real failure
+    // that should burn the submission's retry budget. This is the
+    // operator-walks-out-of-coverage case.
+    const isTimeout = e && e.name === "AbortError";
+    const err = new Error(isTimeout
+      ? (label || "request") + " timed out after " + Math.round(timeoutMs / 1000) + "s"
+      : (label || "request") + " — no connection (" + ((e && e.message) || e) + ")");
+    err.network = true;
+    throw err;
   } finally {
     clearTimeout(timer);
   }
@@ -1652,17 +1659,32 @@ async function drainQueue() {
         consecutiveFails = 0;
         lastSyncAt = new Date();
       } catch (err) {
-        sub.attempts = (sub.attempts || 0) + 1;
-        sub.status = "error";
-        sub.lastError = String(err.message || err);
-        await dbPut(sub);
-        LOG("err.upload", "id=" + sub.id.slice(0,8), "attempt=" + sub.attempts, sub.lastError);
+        if (err && err.network) {
+          // Couldn't reach the server — NOT the submission's fault. Put it
+          // straight back to "queued" (not "error"), don't touch attempts.
+          // It will be retried by the next periodic drain / online event,
+          // indefinitely, until the operator is back in coverage. Partial
+          // progress is preserved — already-uploaded photos stay uploaded.
+          sub.status = "queued";
+          sub.lastError = null;
+          await dbPut(sub);
+          LOG("upload.network", "id=" + sub.id.slice(0,8), String(err.message || err));
+        } else {
+          // Server reached us and rejected — a real problem. This is what
+          // the attempts counter + the 20-cap + the Retry button are for.
+          sub.attempts = (sub.attempts || 0) + 1;
+          sub.status = "error";
+          sub.lastError = String(err.message || err);
+          await dbPut(sub);
+          LOG("err.upload", "id=" + sub.id.slice(0,8), "attempt=" + sub.attempts, sub.lastError);
+        }
         activeUpload = null;
         renderQueueBadge(); renderQueueSheet();
         consecutiveFails++;
-        // One bad submission no longer blocks the rest — we move on. But if
-        // several fail back-to-back the network is probably down, so stop
-        // and let the periodic drain / online event retry later.
+        // Either way: several fails back-to-back means the network is down
+        // (or the server is). Stop this pass — the periodic drain / online
+        // event will pick everything up again. consecutiveFails resets to 0
+        // at the start of the next pass.
         if (consecutiveFails >= 3) {
           LOG("drain.abort", "consecutiveFails=" + consecutiveFails);
           break;
@@ -1735,7 +1757,12 @@ async function uploadSubmission(sub) {
     }, PUT_TIMEOUT_MS, "photo upload");
     if (!putRes.ok) {
       const txt = await putRes.text().catch(() => "");
-      throw new Error("storage PUT " + putRes.status + ": " + txt.slice(0, 200));
+      const putErr = new Error("storage PUT " + putRes.status + ": " + txt.slice(0, 200));
+      // 5xx from storage is a transient infra hiccup — treat it like a
+      // network failure (retry freely, don't burn the budget). 4xx is a
+      // real problem worth surfacing.
+      if (putRes.status >= 500) putErr.network = true;
+      throw putErr;
     }
 
     const fin = await fnCall({
@@ -1771,9 +1798,19 @@ async function fnCall(body) {
   }, FN_TIMEOUT_MS, "server call");
   let json;
   try { json = await res.json(); } catch (_e) {
-    throw new Error("non-JSON response: HTTP " + res.status);
+    // A non-JSON body is almost always a gateway/proxy hiccup (502/504 HTML
+    // page, truncated response) — transient, retry freely.
+    const err = new Error("server call — bad response (HTTP " + res.status + ")");
+    err.network = true;
+    throw err;
   }
-  if (!res.ok || !json.ok) throw new Error(json.error || ("HTTP " + res.status));
+  if (!res.ok || !json.ok) {
+    const err = new Error(json.error || ("HTTP " + res.status));
+    // 5xx = transient server-side; treat like network. 4xx / {ok:false} =
+    // a real rejection the captain needs to see.
+    if (res.status >= 500) err.network = true;
+    throw err;
+  }
   return json;
 }
 
