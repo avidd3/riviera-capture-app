@@ -82,8 +82,38 @@
   .tpFooter .clear,.tpFooter .done{flex:1;padding:11px 14px;border:none;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;font-size:14px}
   .tpFooter .clear{background:#1f5a3f;color:#7fb89c;border:1px solid #2a7c54}
   .tpFooter .done{background:#3da774;color:#fff}
-  input[type=text],input[type=date],textarea{width:100%;background:#0d3b29;color:#f1f3f0;border:1px solid #2a7c54;border-radius:8px;padding:12px;font-size:16px;font-family:inherit}
+  input[type=text],input[type=date],textarea,select{width:100%;background:#0d3b29;color:#f1f3f0;border:1px solid #2a7c54;border-radius:8px;padding:12px;font-size:16px;font-family:inherit}
   textarea{resize:vertical;min-height:80px}
+  /* Blockage section */
+  .blkRow{margin-bottom:10px}
+  .blkRow:last-child{margin-bottom:0}
+  .blkRow label{display:block;font-size:11px;color:#7fb89c;text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:4px}
+  .blkBtn{display:block;width:100%;background:#7a4500;color:#fff;border:none;border-radius:10px;padding:14px;font-size:16px;font-weight:700;cursor:pointer;margin-top:10px}
+  .blkBtn:disabled{background:#1f5a3f;color:#7fb89c;cursor:not-allowed}
+  .blkBtn:active:not(:disabled){background:#8a5510}
+  .blkBtn.end{background:#7a1f1f}
+  .blkBtn.end:active:not(:disabled){background:#9a2f2f}
+  .blkActive{background:#0d3b29;border:1px solid #2a7c54;border-radius:8px;padding:10px 12px;font-size:13px;color:#d3e6db;margin-bottom:10px;line-height:1.4}
+  .blkActive .lbl{color:#7fb89c;text-transform:uppercase;font-size:9px;letter-spacing:.05em;font-weight:600;margin-right:6px}
+  /* Chip-based blockage composer */
+  .blkChipRow{display:flex;flex-wrap:wrap;gap:6px}
+  .blkChipRow .pill{padding:9px 12px;font-size:14px;min-height:40px}
+  .blkChipRow .pill.cat{border-color:#a05a00}
+  .blkChipRow .pill.cat.on{background:#7a4500;border-color:#a05a00}
+  .blkDtRow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .blkDtRow .dt{display:flex;flex-direction:column;gap:4px}
+  .blkDtRow .dt label{font-size:11px;color:#7fb89c;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+  .blkDtRow .dt input{padding:10px;font-size:14px}
+  .blkDtRow .dt .clearDt{background:transparent;border:none;color:#7fb89c;font-size:11px;text-align:left;cursor:pointer;padding:2px 0;text-decoration:underline}
+  /* Open-blockages list (cross-device, fetched from server) */
+  .blkOpenList{margin-bottom:12px;display:flex;flex-direction:column;gap:6px}
+  .blkOpenItem{background:#0d3b29;border:1px solid #2a7c54;border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .blkOpenItem .info{flex:1;min-width:0;font-size:13px;color:#d3e6db;line-height:1.3}
+  .blkOpenItem .info .sub{display:block;font-size:11px;color:#7fb89c;margin-top:2px}
+  .blkOpenItem .resolveBtn{background:#7a1f1f;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .blkOpenItem .resolveBtn:active{background:#9a2f2f}
+  .blkOpenItem .resolveBtn:disabled{background:#1f5a3f;color:#7fb89c;cursor:not-allowed}
+  .blkRefresh{background:transparent;border:none;color:#7fb89c;font-size:11px;cursor:pointer;text-decoration:underline;padding:2px 0;margin-bottom:6px;display:block}
   /* Auto-info row (Core + Mast Climber under GW; Modules under Levels) */
   .autoInfo{margin-top:10px;padding:10px 12px;background:#0d3b29;border:1px solid #1f5a3f;border-radius:8px;font-size:13px;color:#d3e6db;display:flex;flex-wrap:wrap;gap:14px}
   .autoInfo.empty{display:none}
@@ -291,6 +321,62 @@
 
 <button class="submit" id="submitBtn" data-i18n="submit" disabled>Save submission</button>
 
+<!-- 9. Blockage — chip-based composer. All chips render from JS so we get
+     the same look-and-feel as the rest of the PWA. Defaults to "now" for start,
+     blank end = ongoing. Submit posts blockageCreate in a single call. -->
+<section id="blockageSection">
+  <h2><span data-i18n="sectionBlockage">Blockage</span> <span class="hint" data-i18n="sectionBlockageHint">log a site stoppage</span></h2>
+
+  <!-- Open blockages (this captain's). Refreshed on demand + after each submit. -->
+  <div id="blkOpenWrap" style="display:none">
+    <label style="display:block;font-size:11px;color:#7fb89c;text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:4px"><span data-i18n="blkOpenLabel">Ongoing blockages</span></label>
+    <div class="blkOpenList" id="blkOpenList"></div>
+  </div>
+  <button type="button" class="blkRefresh" id="blkRefreshBtn" data-i18n="blkRefresh">↻ Refresh ongoing</button>
+
+  <!-- Category chips -->
+  <div class="blkRow">
+    <label data-i18n="blkCategory">Category</label>
+    <div class="blkChipRow" id="blkCatRow"></div>
+  </div>
+
+  <!-- Mast climber chips (single-select, optional) -->
+  <div class="blkRow">
+    <label><span data-i18n="blkEmplacement">Emplacement (Mast Climber)</span> <span class="hint" data-i18n="optional">optional</span></label>
+    <div class="blkChipRow" id="blkMcRow"></div>
+  </div>
+
+  <!-- Green Wall chips (multi-select, optional) -->
+  <div class="blkRow">
+    <label><span data-i18n="blkGreenWall">Green Wall</span> <span class="hint" data-i18n="optionalMulti">optional · multi-select</span></label>
+    <div class="blkChipRow" id="blkGwRow"></div>
+  </div>
+
+  <!-- Start/End datetimes. Start defaults to now; end blank = still ongoing. -->
+  <div class="blkRow">
+    <div class="blkDtRow">
+      <div class="dt">
+        <label data-i18n="blkStartAt">Start</label>
+        <input type="datetime-local" id="blkStartAt">
+        <button type="button" class="clearDt" id="blkStartNow" data-i18n="blkUseNow">Use now</button>
+      </div>
+      <div class="dt">
+        <label><span data-i18n="blkEndAt">End</span> <span class="hint" data-i18n="optional">optional</span></label>
+        <input type="datetime-local" id="blkEndAt">
+        <button type="button" class="clearDt" id="blkEndClear" data-i18n="blkClearEnd">Clear (ongoing)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Free-text notes (optional only) -->
+  <div class="blkRow">
+    <label><span data-i18n="blkNotes">Notes</span> <span class="hint" data-i18n="optional">optional</span></label>
+    <textarea id="blkNotes" data-i18n-attr="placeholder:blkNotesPh" placeholder="What's blocking the work?"></textarea>
+  </div>
+
+  <button type="button" class="blkBtn" id="blkSubmitBtn" data-i18n="blkSubmit">Log blockage</button>
+</section>
+
 </main>
 </div>
 
@@ -485,7 +571,50 @@ const I18N = {
     debugClear: "Effacer",
     debugCopied: "Journal copié dans le presse-papier",
     toastReadFail: m => "Impossible de lire le fichier : " + m,
-    toastVideoFail: m => "Vignette vidéo échouée : " + m
+    toastVideoFail: m => "Vignette vidéo échouée : " + m,
+    sectionBlockage: "Blocage",
+    sectionBlockageHint: "signaler un arrêt sur site",
+    blkCategory: "Catégorie",
+    blkChoose: "— choisir —",
+    blkNone: "— aucun —",
+    blkCatTracer: "Sécurité (tracer)",
+    blkCatExclusion: "Zone d'exclusion",
+    blkCatMaterial: "Matériel manquant",
+    blkCatWeather: "Météo",
+    blkCatEquip: "Mécanique",
+    blkCatInsp: "Inspection",
+    blkCatCrew: "Problème d'équipe",
+    blkCatRFI: "RFI",
+    blkCatAccess: "Accès",
+    blkCatCoord: "Coordination",
+    blkCatOther: "Divers",
+    blkEmplacement: "Emplacement (Mât)",
+    blkMastClimber: "Mât",
+    blkGreenWall: "Mur végétal",
+    blkLevel: "Niveau",
+    blkLevelPh: "ex. L12",
+    blkNotes: "Notes",
+    blkNotesPh: "Qu'est-ce qui bloque le travail ?",
+    blkResolution: "Résolution / action immédiate",
+    blkResolutionPh: "Comment ça a été levé ?",
+    blkStart: "Démarrer le blocage",
+    blkEnd: "Terminer le blocage",
+    blkStartAt: "Début",
+    blkEndAt: "Fin",
+    blkUseNow: "Maintenant",
+    blkClearEnd: "Effacer (en cours)",
+    blkSubmit: "Enregistrer le blocage",
+    blkOpenLabel: "Blocages en cours",
+    blkRefresh: "↻ Rafraîchir",
+    blkResolveBtn: "Résolu (maintenant)",
+    blkActiveLabel: "Blocage en cours",
+    blkStarted: "Blocage démarré.",
+    blkEnded: "Blocage terminé.",
+    blkCreated: "Blocage enregistré.",
+    blkResolved: "Blocage résolu.",
+    blkMissing: "Choisis une catégorie.",
+    optionalMulti: "facultatif · multi-sélection",
+    blkErr: m => "Échec : " + m
   },
   en: {
     headerTitle: "Riviera Capture",
@@ -591,7 +720,50 @@ const I18N = {
     debugClear: "Clear",
     debugCopied: "Log copied to clipboard",
     toastReadFail: m => "Couldn't read file: " + m,
-    toastVideoFail: m => "Video thumbnail failed: " + m
+    toastVideoFail: m => "Video thumbnail failed: " + m,
+    sectionBlockage: "Blockage",
+    sectionBlockageHint: "log a site stoppage",
+    blkCategory: "Category",
+    blkChoose: "— choose —",
+    blkNone: "— none —",
+    blkCatTracer: "Safety (tracer)",
+    blkCatExclusion: "Exclusion zone",
+    blkCatMaterial: "Material missing",
+    blkCatWeather: "Weather",
+    blkCatEquip: "Mechanical",
+    blkCatInsp: "Inspection",
+    blkCatCrew: "Crew issue",
+    blkCatRFI: "RFI",
+    blkCatAccess: "Access",
+    blkCatCoord: "Coordination",
+    blkCatOther: "Other",
+    blkEmplacement: "Emplacement (Mast Climber)",
+    blkMastClimber: "Mast climber",
+    blkGreenWall: "Green Wall",
+    blkLevel: "Level",
+    blkLevelPh: "e.g. L12",
+    blkNotes: "Notes",
+    blkNotesPh: "What's blocking the work?",
+    blkResolution: "Resolution / immediate action",
+    blkResolutionPh: "How was it cleared?",
+    blkStart: "Start blockage",
+    blkEnd: "End blockage",
+    blkStartAt: "Start",
+    blkEndAt: "End",
+    blkUseNow: "Now",
+    blkClearEnd: "Clear (ongoing)",
+    blkSubmit: "Log blockage",
+    blkOpenLabel: "Ongoing blockages",
+    blkRefresh: "↻ Refresh ongoing",
+    blkResolveBtn: "Resolved (now)",
+    blkActiveLabel: "Active blockage",
+    blkStarted: "Blockage started.",
+    blkEnded: "Blockage ended.",
+    blkCreated: "Blockage logged.",
+    blkResolved: "Blockage resolved.",
+    blkMissing: "Pick a category.",
+    optionalMulti: "optional · multi-select",
+    blkErr: m => "Failed: " + m
   }
 };
 
@@ -630,6 +802,7 @@ function setLang(l) {
   renderQueueSheet();
   renderThumbs();
   onFormChange();
+  try { renderBlockage(); } catch (_e) {}
 }
 
 // ============================================================
@@ -2380,6 +2553,239 @@ if ("serviceWorker" in navigator) {
     caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {});
   }
 }
+
+// ============================================================
+// Blockage section (v2: chip composer + server-driven open list)
+// ============================================================
+// One-time cleanup: the old v1 flow kept "active blockage" pointers in
+// localStorage. v2 reads/writes everything through Supabase via the
+// captain token, so these are dead. Drop them on boot.
+try {
+  localStorage.removeItem("riviera.activeBlockageId");
+  localStorage.removeItem("riviera.activeBlockageMeta");
+} catch (_e) {}
+
+// Chip-based blockage composer.
+//
+// Categories use French labels (the edge function maps to enum). MC is single-select
+// optional. GW is multi-select optional. Start defaults to "now"; end blank = ongoing.
+// One POST per blockage via blockageCreate. Open-blockages list is server-driven so
+// captains can mark resolved from any device.
+
+const BLK_CATEGORIES = [
+  // labelKey is i18n; value is the French label posted to the edge fn (which maps to enum).
+  { value: "Coordination",       labelKey: "blkCatCoord" },
+  { value: "Mécanique",          labelKey: "blkCatEquip" },
+  { value: "Zone d'exclusion",   labelKey: "blkCatExclusion" },
+  { value: "Problème d'équipe",  labelKey: "blkCatCrew" },
+  { value: "Météo",              labelKey: "blkCatWeather" },
+  { value: "Matériel manquant",  labelKey: "blkCatMaterial" },
+  { value: "Sécurité",           labelKey: "blkCatTracer" },
+  { value: "Divers",             labelKey: "blkCatOther" },
+];
+const BLK_MCS  = ["MC 7", "MC 15", "MC 16"];
+const BLK_GWS  = ["GW 1", "GW 2", "GW 3", "GW 4"];
+
+// State held outside the DOM so language re-renders preserve selections.
+let blkCategoryPick = null;        // string label, or null
+let blkMcPick       = null;        // string label, or null
+const blkGwPicks    = new Set();   // strings
+
+// Build a row of single-select chips. Renders into rowId; returns nothing
+// (state lives in the caller's variable closure via setter callback).
+function blkBuildSingleChips(rowId, options, getSelected, setSelected, extraCls = "") {
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  row.innerHTML = "";
+  options.forEach(opt => {
+    const val = typeof opt === "string" ? opt : opt.value;
+    const lbl = typeof opt === "string" ? opt : t(opt.labelKey);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "pill " + extraCls + (getSelected() === val ? " on" : "");
+    b.textContent = lbl;
+    b.dataset.val = val;
+    b.addEventListener("click", () => {
+      // Toggle off if same chip tapped again (so "optional" can become null).
+      setSelected(getSelected() === val ? null : val);
+      row.querySelectorAll(".pill").forEach(p => p.classList.toggle("on", p.dataset.val === getSelected()));
+    });
+    row.appendChild(b);
+  });
+}
+
+// Multi-select chip row, backed by a Set.
+function blkBuildMultiChips(rowId, options, set) {
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  row.innerHTML = "";
+  options.forEach(val => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "pill" + (set.has(val) ? " on" : "");
+    b.textContent = val;
+    b.dataset.val = val;
+    b.addEventListener("click", () => {
+      if (set.has(val)) set.delete(val); else set.add(val);
+      b.classList.toggle("on", set.has(val));
+    });
+    row.appendChild(b);
+  });
+}
+
+// Format a "YYYY-MM-DDTHH:MM" string from a Date in *local* time
+// (so the datetime-local input shows what the captain sees on their phone).
+function blkLocalDtValue(d) {
+  const p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function blkRenderChips() {
+  blkBuildSingleChips("blkCatRow", BLK_CATEGORIES,
+    () => blkCategoryPick, v => { blkCategoryPick = v; }, "cat");
+  blkBuildSingleChips("blkMcRow", BLK_MCS,
+    () => blkMcPick, v => { blkMcPick = v; });
+  blkBuildMultiChips("blkGwRow", BLK_GWS, blkGwPicks);
+}
+
+function blkResetForm() {
+  blkCategoryPick = null;
+  blkMcPick = null;
+  blkGwPicks.clear();
+  blkRenderChips();
+  document.getElementById("blkStartAt").value = blkLocalDtValue(new Date());
+  document.getElementById("blkEndAt").value = "";
+  document.getElementById("blkNotes").value = "";
+}
+
+// Server-driven open-blockages list (replaces localStorage-only flow so a
+// captain can mark resolved from any device they're logged into).
+let blkOpenCache = [];
+async function blkLoadOpen() {
+  try {
+    const res = await fnCall({ mode: "blockageList", status: "open" });
+    blkOpenCache = Array.isArray(res.blockages) ? res.blockages : [];
+    LOG("blk.list.ok", "n=" + blkOpenCache.length);
+  } catch (e) {
+    LOG("err.blk.list", String(e.message || e));
+    // Don't toast on background failure (e.g., offline) — just keep the cache.
+  }
+  blkRenderOpen();
+}
+
+function blkRenderOpen() {
+  const wrap = document.getElementById("blkOpenWrap");
+  const list = document.getElementById("blkOpenList");
+  if (!wrap || !list) return;
+  if (blkOpenCache.length === 0) {
+    wrap.style.display = "none";
+    list.innerHTML = "";
+    return;
+  }
+  wrap.style.display = "";
+  list.innerHTML = "";
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+  blkOpenCache.forEach(b => {
+    const parts = [];
+    if (b.category) parts.push(b.category.replace(/_/g, " "));
+    if (b.mast_climber) parts.push(b.mast_climber);
+    if (b.zone) parts.push(b.zone);
+    else if (b.green_wall) parts.push(b.green_wall);
+    const sub = b.start_at ? new Date(b.start_at).toLocaleString() : "";
+    const item = document.createElement("div");
+    item.className = "blkOpenItem";
+    item.innerHTML = `<div class="info">${esc(parts.join(" · "))}<span class="sub">${esc(sub)}</span></div>` +
+                     `<button type="button" class="resolveBtn" data-id="${esc(b.id)}">${esc(t("blkResolveBtn"))}</button>`;
+    item.querySelector(".resolveBtn").addEventListener("click", (ev) => blkResolve(b.id, ev.currentTarget));
+    list.appendChild(item);
+  });
+}
+
+async function blkResolve(id, btn) {
+  if (!id) return;
+  if (btn) btn.disabled = true;
+  LOG("blk.resolve", "id=" + id.slice(0, 8));
+  try {
+    await fnCall({ mode: "blockageEnd", blockageId: id });
+    // Drop locally and re-render immediately; fire a background re-list in case
+    // multiple captains are clearing concurrently.
+    blkOpenCache = blkOpenCache.filter(x => x.id !== id);
+    blkRenderOpen();
+    LOG("blk.resolve.ok", "id=" + id.slice(0, 8));
+    toast(t("blkResolved"));
+    blkLoadOpen();
+  } catch (e) {
+    LOG("err.blk.resolve", String(e.message || e));
+    toast(t("blkErr", e.message || String(e)), true);
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function blkSubmit() {
+  if (!blkCategoryPick) { toast(t("blkMissing"), true); return; }
+
+  // Read the datetime-local strings and ship them as-is — the browser already
+  // formatted them in local time; the edge function calls new Date(...) which
+  // interprets them in the server's UTC, but since the field literally is local
+  // wall-clock it round-trips correctly for display purposes.
+  const startVal = document.getElementById("blkStartAt").value || blkLocalDtValue(new Date());
+  const endVal   = document.getElementById("blkEndAt").value || null;
+  const notes    = document.getElementById("blkNotes").value.trim();
+
+  const fields = {
+    category: blkCategoryPick,
+    mast_climber: blkMcPick || null,
+    green_walls: Array.from(blkGwPicks),
+    start_at: startVal,
+    end_at: endVal,
+    description: notes
+  };
+
+  const btn = document.getElementById("blkSubmitBtn");
+  btn.disabled = true;
+  LOG("blk.create", "cat=" + blkCategoryPick, "mc=" + (blkMcPick || "-"),
+      "gws=" + (fields.green_walls.join(",") || "-"),
+      "ongoing=" + (endVal ? "no" : "yes"));
+  try {
+    const res = await fnCall({ mode: "blockageCreate", blockageFields: fields });
+    if (!res.blockageId) throw new Error("no blockageId returned");
+    LOG("blk.create.ok", "id=" + res.blockageId.slice(0, 8), "status=" + (res.blockage?.status || "?"));
+    toast(t("blkCreated"));
+    blkResetForm();
+    // Refresh open list so a still-open one shows up there immediately.
+    blkLoadOpen();
+  } catch (e) {
+    LOG("err.blk.create", String(e.message || e));
+    toast(t("blkErr", e.message || String(e)), true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Keep the old function name so the setLang() call site
+// (`try { renderBlockage(); } catch (_e) {}`) doesn't ReferenceError when
+// switching languages. New impl re-renders chips with the new labels and
+// re-renders the open list (which has localized button labels).
+function renderBlockage() {
+  blkRenderChips();
+  blkRenderOpen();
+}
+
+// Wire up.
+document.getElementById("blkSubmitBtn").addEventListener("click", blkSubmit);
+document.getElementById("blkStartNow").addEventListener("click", () => {
+  document.getElementById("blkStartAt").value = blkLocalDtValue(new Date());
+});
+document.getElementById("blkEndClear").addEventListener("click", () => {
+  document.getElementById("blkEndAt").value = "";
+});
+document.getElementById("blkRefreshBtn").addEventListener("click", blkLoadOpen);
+
+// Initial render: chips, start=now, open list (fires fnCall in background).
+blkRenderChips();
+document.getElementById("blkStartAt").value = blkLocalDtValue(new Date());
+// Load open blockages on boot, but don't block. Errors stay silent (offline-friendly).
+blkLoadOpen();
 
 // Language toggle
 document.querySelectorAll(".langBtn").forEach(b =>
