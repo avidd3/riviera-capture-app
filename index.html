@@ -251,6 +251,33 @@
   .homeBtn{background:#1f5a3f;border:1px solid #2a7c54;color:#d3e6db;border-radius:8px;padding:9px 14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
   .homeBtn:active{background:#2a7c54}
   .homeBar .crumb{font-size:12px;color:#7fb89c;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+  /* All-blockages browse button + list rows */
+  .blkViewAllBtn{display:block;width:100%;background:#1f5a3f;border:1px solid #2a7c54;color:#d3e6db;border-radius:8px;padding:10px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px;text-align:center}
+  .blkViewAllBtn:active{background:#2a7c54}
+  .blkAllRow{background:#0d3b29;border:1px solid #1f5a3f;border-radius:8px;padding:9px 11px;cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;line-height:1.3}
+  .blkAllRow:active{background:#11432f}
+  .blkAllRow .main{font-size:13px;color:#f1f3f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .blkAllRow .sub{font-size:11px;color:#7fb89c;margin-top:2px;display:block}
+  .blkAllRow .bid{font-family:ui-monospace,Menlo,monospace;color:#7fb89c;font-size:11px;margin-right:6px}
+  .blkAllRow .badge{font-size:10px;padding:2px 7px;border-radius:999px;text-transform:uppercase;letter-spacing:.04em;font-weight:600;white-space:nowrap}
+  .blkAllRow .badge.open{background:#7a4500;color:#fff}
+  .blkAllRow .badge.closed{background:#1f5a3f;color:#7fb89c}
+  .blkAllRow .badge.resolved{background:#2a7c54;color:#fff}
+  .blkAllRow .badge.other{background:#11432f;color:#7fb89c}
+  .blkAllRow .dur{font-size:10px;color:#7fb89c;margin-top:2px}
+  .blkDetailGrid{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px;background:#0d3b29;border:1px solid #1f5a3f;border-radius:8px;padding:12px;margin-bottom:14px}
+  .blkDetailGrid .lbl{color:#7fb89c;font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:600;align-self:start;padding-top:2px}
+  .blkDetailGrid .val{color:#fff;word-break:break-word;white-space:pre-wrap}
+  .blkDetailGrid .val.muted{color:#7fb89c}
+  /* Photo lightbox overlay */
+  #photoLightbox{position:fixed;inset:0;background:rgba(0,0,0,.96);z-index:80;display:none;align-items:center;justify-content:center;touch-action:none;overflow:hidden}
+  #photoLightbox.show{display:flex}
+  #photoLightbox .lbStage{position:relative;width:100%;height:100%;overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:none}
+  #photoLightbox img,#photoLightbox video{max-width:100%;max-height:100%;display:block;transform-origin:0 0;transform:translate(0,0) scale(1);transition:transform .12s ease-out;user-select:none;-webkit-user-select:none;pointer-events:none;will-change:transform}
+  #photoLightbox.dragging img,#photoLightbox.dragging video{transition:none}
+  #photoLightbox .lbCloseBtn{position:absolute;top:env(safe-area-inset-top,12px);right:12px;background:rgba(0,0,0,.7);color:#fff;border:1px solid #444;border-radius:50%;width:42px;height:42px;font-size:22px;line-height:1;cursor:pointer;z-index:2}
+  #photoLightbox .lbCloseBtn:active{background:#7a1f1f}
+  #photoLightbox .lbHint{position:absolute;bottom:env(safe-area-inset-bottom,12px);left:50%;transform:translateX(-50%);color:#888;font-size:11px;pointer-events:none;background:rgba(0,0,0,.5);padding:4px 10px;border-radius:999px}
 </style>
 </head>
 <body>
@@ -413,6 +440,7 @@
     <div class="blkOpenList" id="blkOpenList"></div>
   </div>
   <button type="button" class="blkRefresh" id="blkRefreshBtn" data-i18n="blkRefresh">↻ Refresh ongoing</button>
+  <button type="button" class="blkViewAllBtn" id="blkViewAllBtn" data-i18n="blkViewAllBtn">📋 View all blockages</button>
 
   <!-- Category chips -->
   <div class="blkRow">
@@ -636,6 +664,37 @@
   </div>
 </div>
 
+<!-- All-blockages browse overlay (open + closed + resolved, this captain's) -->
+<div class="overlay" id="blkAllOverlay">
+  <div class="sheet">
+    <button class="closeBtn" id="blkAllClose" type="button">×</button>
+    <h3><span data-i18n="blkAllListTitle">All blockages</span> <span class="sub" id="blkAllSub"></span></h3>
+    <div class="qToolbar">
+      <button type="button" id="blkAllRefreshBtn" data-i18n="blkRefresh">↻ Refresh</button>
+    </div>
+    <div id="blkAllList" style="display:flex;flex-direction:column;gap:6px"></div>
+  </div>
+</div>
+
+<!-- Single blockage detail overlay -->
+<div class="overlay" id="blkDetailOverlay">
+  <div class="sheet">
+    <button class="closeBtn" id="blkDetailClose" type="button">×</button>
+    <h3><span data-i18n="blkDetailTitle">Blockage details</span> <span class="sub" id="blkDetailSub"></span></h3>
+    <div class="blkDetailGrid" id="blkDetailGrid"></div>
+    <button type="button" class="blkViewAllBtn" id="blkDetailBackBtn" data-i18n="blkBackToList">← Back to list</button>
+  </div>
+</div>
+
+<!-- Photo lightbox (pinch / click to zoom for upload-queue previews) -->
+<div id="photoLightbox" aria-hidden="true">
+  <button class="lbCloseBtn" id="photoLightboxClose" type="button" aria-label="Close">×</button>
+  <div class="lbStage" id="photoLightboxStage">
+    <img id="photoLightboxImg" alt="">
+  </div>
+  <div class="lbHint" id="photoLightboxHint" data-i18n="lightboxHint">Pinch · drag · double-tap to reset</div>
+</div>
+
 <!-- Debug log overlay -->
 <div class="overlay" id="debugOverlay">
   <div class="sheet">
@@ -799,6 +858,43 @@ const I18N = {
     blkOpenLabel: "Blocages en cours",
     blkRefresh: "↻ Rafraîchir",
     blkResolveBtn: "Résolu (maintenant)",
+    blkViewAllBtn: "📋 Voir tous les blocages",
+    blkAllListTitle: "Tous les blocages",
+    blkAllSub: (n) => n + " enregistré" + (n === 1 ? "" : "s"),
+    blkAllEmpty: "Aucun blocage enregistré.",
+    blkAllLoading: "Chargement…",
+    blkDetailTitle: "Détails du blocage",
+    blkBackToList: "← Retour à la liste",
+    blkStatusOpen: "en cours",
+    blkStatusClosed: "clôturé",
+    blkStatusResolved: "résolu",
+    blkDurMin: m => m + " min",
+    blkDurH:   (h, m) => h + "h" + (m ? String(m).padStart(2, "0") : ""),
+    blkDurDay: (d, h) => d + "j" + (h ? " " + h + "h" : ""),
+    blkFieldId: "Identifiant",
+    blkFieldStatus: "Statut",
+    blkFieldCategory: "Catégorie",
+    blkFieldMC: "Mast Climber",
+    blkFieldGW: "Mur végétal",
+    blkFieldZone: "Zone",
+    blkFieldLevel: "Niveau",
+    blkFieldShifts: "Tranches horaires",
+    blkFieldTeams: "Équipes",
+    blkFieldStart: "Début",
+    blkFieldEnd: "Fin",
+    blkFieldDuration: "Durée",
+    blkFieldDescription: "Description",
+    blkFieldImmediate: "Action immédiate",
+    blkFieldPermanent: "Solution durable",
+    blkFieldRootCause: "Cause racine",
+    blkFieldResponsible: "Responsable",
+    blkFieldImpactH: "Impact (heures)",
+    blkFieldImpactEur: "Impact (€)",
+    blkFieldBy: "Créé par",
+    blkFieldCreated: "Créé le",
+    blkFieldUpdated: "Modifié le",
+    lightboxHint: "Pincer · glisser · double-tap pour réinitialiser",
+    lightboxCloseBtn: "Fermer",
     blkActiveLabel: "Blocage en cours",
     blkStarted: "Blocage démarré.",
     blkEnded: "Blocage terminé.",
@@ -998,6 +1094,43 @@ const I18N = {
     blkOpenLabel: "Ongoing blockages",
     blkRefresh: "↻ Refresh ongoing",
     blkResolveBtn: "Resolved (now)",
+    blkViewAllBtn: "📋 View all blockages",
+    blkAllListTitle: "All blockages",
+    blkAllSub: (n) => n + " logged",
+    blkAllEmpty: "No blockages logged yet.",
+    blkAllLoading: "Loading…",
+    blkDetailTitle: "Blockage details",
+    blkBackToList: "← Back to list",
+    blkStatusOpen: "open",
+    blkStatusClosed: "closed",
+    blkStatusResolved: "resolved",
+    blkDurMin: m => m + " min",
+    blkDurH:   (h, m) => h + "h" + (m ? String(m).padStart(2, "0") : ""),
+    blkDurDay: (d, h) => d + "d" + (h ? " " + h + "h" : ""),
+    blkFieldId: "Id",
+    blkFieldStatus: "Status",
+    blkFieldCategory: "Category",
+    blkFieldMC: "Mast Climber",
+    blkFieldGW: "Green Wall",
+    blkFieldZone: "Zone",
+    blkFieldLevel: "Level",
+    blkFieldShifts: "Shifts",
+    blkFieldTeams: "Teams impacted",
+    blkFieldStart: "Start",
+    blkFieldEnd: "End",
+    blkFieldDuration: "Duration",
+    blkFieldDescription: "Description",
+    blkFieldImmediate: "Immediate action",
+    blkFieldPermanent: "Permanent fix",
+    blkFieldRootCause: "Root cause",
+    blkFieldResponsible: "Responsible party",
+    blkFieldImpactH: "Impact (hours)",
+    blkFieldImpactEur: "Impact (EUR)",
+    blkFieldBy: "Created by",
+    blkFieldCreated: "Created at",
+    blkFieldUpdated: "Updated at",
+    lightboxHint: "Pinch · drag · double-tap to reset",
+    lightboxCloseBtn: "Close",
     blkActiveLabel: "Active blockage",
     blkStarted: "Blockage started.",
     blkEnded: "Blockage ended.",
@@ -2646,6 +2779,16 @@ async function openSubmissionDetail(id) {
         <span class="badge ${p.uploaded ? "up" : ""}">${p.uploaded ? "✓" : (desc || tagsCount ? "📝" : "")}</span>
       </div>
     `;
+    // Tap a thumb → fullscreen lightbox with pinch/zoom. Only for images
+    // (videos would need a different player). Source is the same dataURL the
+    // queue already holds — no extra fetch.
+    if (p.thumbDataUrl && p.mediaKind !== "video") {
+      card.style.cursor = "zoom-in";
+      card.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openPhotoLightbox(p.thumbDataUrl);
+      });
+    }
     photosHost.appendChild(card);
   });
 
@@ -3414,6 +3557,342 @@ async function blkResolve(id, btn) {
   }
 }
 
+// ============================================================
+// All-blockages browse + detail (open + closed + resolved).
+// Captain auth → server scopes to this captain's rows. Uses the
+// new `scope:"all"` filter on blockageList added in edge fn v23+.
+// ============================================================
+let blkAllCache = [];
+
+function blkFmtDuration(startIso, endIso) {
+  if (!startIso || !endIso) return "";
+  const s = new Date(startIso).getTime();
+  const e = new Date(endIso).getTime();
+  if (isNaN(s) || isNaN(e) || e < s) return "";
+  const mins = Math.round((e - s) / 60000);
+  if (mins < 60) return t("blkDurMin", mins);
+  const hrs = Math.floor(mins / 60);
+  const remMin = mins % 60;
+  if (hrs < 24) return t("blkDurH", hrs, remMin);
+  const days = Math.floor(hrs / 24);
+  const remHr = hrs % 24;
+  return t("blkDurDay", days, remHr);
+}
+
+function blkStatusLabel(status) {
+  if (status === "open") return t("blkStatusOpen");
+  if (status === "closed") return t("blkStatusClosed");
+  if (status === "resolved") return t("blkStatusResolved");
+  return status || "—";
+}
+
+function blkStatusClass(status) {
+  if (status === "open" || status === "closed" || status === "resolved") return status;
+  return "other";
+}
+
+async function blkLoadAll() {
+  const list = document.getElementById("blkAllList");
+  const sub  = document.getElementById("blkAllSub");
+  if (list) list.innerHTML = `<div class="empty">${t("blkAllLoading")}</div>`;
+  try {
+    // scope:"all" → server returns every blockage; for captain auth the server
+    // still scopes to own rows for safety. New in edge fn v23.
+    const res = await fnCall({ mode: "blockageList", scope: "all" });
+    blkAllCache = Array.isArray(res.blockages) ? res.blockages : [];
+    LOG("blk.list.all.ok", "n=" + blkAllCache.length);
+  } catch (e) {
+    LOG("err.blk.list.all", String(e.message || e));
+    blkAllCache = [];
+    if (list) list.innerHTML = `<div class="empty">${escapeHtml(t("blkErr", e.message || String(e)))}</div>`;
+    if (sub) sub.textContent = "";
+    return;
+  }
+  blkRenderAll();
+}
+
+function blkRenderAll() {
+  const list = document.getElementById("blkAllList");
+  const sub  = document.getElementById("blkAllSub");
+  if (!list) return;
+  if (sub) sub.textContent = t("blkAllSub", blkAllCache.length);
+  if (blkAllCache.length === 0) {
+    list.innerHTML = `<div class="empty">${t("blkAllEmpty")}</div>`;
+    return;
+  }
+  list.innerHTML = "";
+  blkAllCache.forEach(b => {
+    const parts = [];
+    if (b.category) parts.push(b.category.replace(/_/g, " "));
+    if (b.mast_climber) parts.push(b.mast_climber);
+    if (b.zone) parts.push(b.zone);
+    else if (b.green_wall) parts.push(b.green_wall);
+    const main = parts.join(" · ") || "—";
+    const startStr = b.start_at ? new Date(b.start_at).toLocaleString() : "—";
+    const dur = blkFmtDuration(b.start_at, b.end_at);
+    const shortId = (b.blk_id || b.id || "").toString().slice(0, 8);
+    const row = document.createElement("div");
+    row.className = "blkAllRow";
+    row.setAttribute("role", "button");
+    row.innerHTML =
+      `<div>
+        <div class="main"><span class="bid">${escapeHtml(shortId)}</span>${escapeHtml(main)}</div>
+        <span class="sub">${escapeHtml(startStr)}${dur ? " · " + escapeHtml(dur) : ""}</span>
+      </div>
+      <span class="badge ${blkStatusClass(b.status)}">${escapeHtml(blkStatusLabel(b.status))}</span>`;
+    row.addEventListener("click", () => blkOpenDetail(b.id));
+    list.appendChild(row);
+  });
+}
+
+function blkOpenDetail(id) {
+  const b = blkAllCache.find(x => x.id === id);
+  if (!b) return;
+  const grid = document.getElementById("blkDetailGrid");
+  const sub  = document.getElementById("blkDetailSub");
+  if (!grid) return;
+  if (sub) sub.textContent = (b.blk_id || (b.id || "").slice(0, 8)) || "";
+
+  const rows = [];
+  const fmt = (lblKey, val) => {
+    if (val === null || val === undefined || val === "" ||
+        (Array.isArray(val) && val.length === 0)) return;
+    const out = Array.isArray(val) ? val.join(", ") : String(val);
+    rows.push({ lbl: t(lblKey), val: out });
+  };
+  fmt("blkFieldId",          b.blk_id);
+  rows.push({ lbl: t("blkFieldStatus"),
+              val: blkStatusLabel(b.status), badge: blkStatusClass(b.status) });
+  fmt("blkFieldCategory",    b.category ? b.category.replace(/_/g, " ") : null);
+  fmt("blkFieldMC",          b.mast_climber);
+  fmt("blkFieldGW",          b.green_wall);
+  fmt("blkFieldZone",        b.zone);
+  fmt("blkFieldLevel",       b.level);
+  fmt("blkFieldShifts",      b.shifts);
+  fmt("blkFieldTeams",       b.teams_impacted);
+  fmt("blkFieldStart",       b.start_at ? new Date(b.start_at).toLocaleString() : null);
+  fmt("blkFieldEnd",         b.end_at   ? new Date(b.end_at).toLocaleString()   : null);
+  const dur = blkFmtDuration(b.start_at, b.end_at);
+  if (dur) rows.push({ lbl: t("blkFieldDuration"), val: dur });
+  fmt("blkFieldDescription", b.description && b.description !== "(no notes)" ? b.description : null);
+  fmt("blkFieldImmediate",   b.immediate_action);
+  fmt("blkFieldPermanent",   b.permanent_fix);
+  fmt("blkFieldRootCause",   b.root_cause);
+  fmt("blkFieldResponsible", b.responsible_party);
+  if (b.impact_hours !== null && b.impact_hours !== undefined)
+    rows.push({ lbl: t("blkFieldImpactH"), val: String(b.impact_hours) });
+  if (b.impact_eur !== null && b.impact_eur !== undefined)
+    rows.push({ lbl: t("blkFieldImpactEur"), val: String(b.impact_eur) });
+  fmt("blkFieldBy",          b.created_by_email);
+  fmt("blkFieldCreated",     b.created_at ? new Date(b.created_at).toLocaleString() : null);
+  fmt("blkFieldUpdated",     b.updated_at ? new Date(b.updated_at).toLocaleString() : null);
+
+  grid.innerHTML = rows.map(r =>
+    `<div class="lbl">${escapeHtml(r.lbl)}</div>` +
+    `<div class="val">${escapeHtml(r.val)}</div>`
+  ).join("");
+
+  document.getElementById("blkDetailOverlay").classList.add("show");
+}
+
+function blkCloseDetail() {
+  document.getElementById("blkDetailOverlay").classList.remove("show");
+}
+
+// ============================================================
+// Photo lightbox — pinch / drag / double-tap (touch + mouse).
+// Opens with a Blob URL or http(s) URL. Reuses whatever the
+// upload queue already has — no extra fetch.
+// ============================================================
+const lbState = {
+  scale: 1, minScale: 1, maxScale: 8,
+  tx: 0, ty: 0,
+  // single-pointer drag
+  dragging: false, dragStartX: 0, dragStartY: 0, dragTx0: 0, dragTy0: 0,
+  // pinch
+  pinching: false, pinchD0: 0, pinchScale0: 1,
+  pinchMidX: 0, pinchMidY: 0, pinchTx0: 0, pinchTy0: 0,
+  // double-tap
+  lastTapMs: 0, lastTapX: 0, lastTapY: 0,
+  // pointers tracked for pinch
+  pointers: new Map(),
+  // tap suppression
+  suppressClick: false,
+};
+
+function lbApplyTransform() {
+  const img = document.getElementById("photoLightboxImg");
+  if (!img) return;
+  img.style.transform = `translate(${lbState.tx}px, ${lbState.ty}px) scale(${lbState.scale})`;
+}
+
+function lbReset() {
+  lbState.scale = 1; lbState.tx = 0; lbState.ty = 0;
+  lbApplyTransform();
+}
+
+function openPhotoLightbox(srcOrBlob) {
+  const lb = document.getElementById("photoLightbox");
+  const img = document.getElementById("photoLightboxImg");
+  if (!lb || !img) return;
+  // Allow either a string URL or a Blob object. If a Blob, mint an object URL
+  // and free it on close.
+  let url = null, ownedUrl = null;
+  if (srcOrBlob instanceof Blob) {
+    ownedUrl = URL.createObjectURL(srcOrBlob);
+    url = ownedUrl;
+  } else if (typeof srcOrBlob === "string") {
+    url = srcOrBlob;
+  }
+  if (!url) return;
+  img.src = url;
+  lb._ownedUrl = ownedUrl;
+  lbReset();
+  lb.classList.add("show");
+  lb.setAttribute("aria-hidden", "false");
+  // Hide hint after 2.5s
+  const hint = document.getElementById("photoLightboxHint");
+  if (hint) {
+    hint.style.opacity = "1";
+    clearTimeout(lb._hintTimer);
+    lb._hintTimer = setTimeout(() => { hint.style.opacity = "0"; hint.style.transition = "opacity .4s"; }, 2500);
+  }
+}
+
+function closePhotoLightbox() {
+  const lb = document.getElementById("photoLightbox");
+  const img = document.getElementById("photoLightboxImg");
+  if (!lb) return;
+  lb.classList.remove("show");
+  lb.setAttribute("aria-hidden", "true");
+  if (lb._ownedUrl) {
+    try { URL.revokeObjectURL(lb._ownedUrl); } catch (_e) {}
+    lb._ownedUrl = null;
+  }
+  if (img) img.src = "";
+  lbState.pointers.clear();
+  lbState.dragging = false;
+  lbState.pinching = false;
+}
+
+function lbDistance(p1, p2) {
+  const dx = p1.x - p2.x, dy = p1.y - p2.y;
+  return Math.hypot(dx, dy);
+}
+
+// Pointer events handle mouse + touch uniformly. iOS Safari supports them.
+function lbWirePointerEvents() {
+  const stage = document.getElementById("photoLightboxStage");
+  const lb    = document.getElementById("photoLightbox");
+  if (!stage || !lb) return;
+
+  stage.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    stage.setPointerCapture(e.pointerId);
+    lbState.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (lbState.pointers.size === 1) {
+      // Start drag; also schedule double-tap detection on pointerup.
+      lbState.dragging = true;
+      lbState.pinching = false;
+      lbState.dragStartX = e.clientX;
+      lbState.dragStartY = e.clientY;
+      lbState.dragTx0 = lbState.tx;
+      lbState.dragTy0 = lbState.ty;
+      lb.classList.add("dragging");
+    } else if (lbState.pointers.size === 2) {
+      // Switch to pinch mode.
+      lbState.dragging = false;
+      lbState.pinching = true;
+      const pts = Array.from(lbState.pointers.values());
+      lbState.pinchD0 = lbDistance(pts[0], pts[1]) || 1;
+      lbState.pinchScale0 = lbState.scale;
+      lbState.pinchMidX = (pts[0].x + pts[1].x) / 2;
+      lbState.pinchMidY = (pts[0].y + pts[1].y) / 2;
+      lbState.pinchTx0 = lbState.tx;
+      lbState.pinchTy0 = lbState.ty;
+    }
+  });
+
+  stage.addEventListener("pointermove", (e) => {
+    if (!lbState.pointers.has(e.pointerId)) return;
+    lbState.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (lbState.pinching && lbState.pointers.size >= 2) {
+      const pts = Array.from(lbState.pointers.values()).slice(0, 2);
+      const d = lbDistance(pts[0], pts[1]);
+      let newScale = lbState.pinchScale0 * (d / lbState.pinchD0);
+      newScale = Math.max(lbState.minScale, Math.min(lbState.maxScale, newScale));
+      // Zoom toward the midpoint: keep the world-space point under the
+      // pinch midpoint stationary as scale changes.
+      const k = newScale / lbState.pinchScale0;
+      lbState.scale = newScale;
+      lbState.tx = lbState.pinchMidX - k * (lbState.pinchMidX - lbState.pinchTx0);
+      lbState.ty = lbState.pinchMidY - k * (lbState.pinchMidY - lbState.pinchTy0);
+      lbApplyTransform();
+      lbState.suppressClick = true;
+    } else if (lbState.dragging) {
+      const dx = e.clientX - lbState.dragStartX;
+      const dy = e.clientY - lbState.dragStartY;
+      if (Math.hypot(dx, dy) > 6) lbState.suppressClick = true;
+      lbState.tx = lbState.dragTx0 + dx;
+      lbState.ty = lbState.dragTy0 + dy;
+      lbApplyTransform();
+    }
+  });
+
+  function endPointer(e) {
+    if (!lbState.pointers.has(e.pointerId)) return;
+    lbState.pointers.delete(e.pointerId);
+    if (lbState.pointers.size < 2) lbState.pinching = false;
+    if (lbState.pointers.size === 0) {
+      lbState.dragging = false;
+      document.getElementById("photoLightbox").classList.remove("dragging");
+      // Double-tap = reset zoom OR zoom to 2x.
+      const now = performance.now();
+      if (!lbState.suppressClick) {
+        const dx = e.clientX - lbState.lastTapX;
+        const dy = e.clientY - lbState.lastTapY;
+        if (now - lbState.lastTapMs < 320 && Math.hypot(dx, dy) < 30) {
+          if (lbState.scale > 1.05) lbReset();
+          else {
+            // Zoom to 2x centered on the tap.
+            const k = 2;
+            lbState.scale = k;
+            lbState.tx = e.clientX - k * (e.clientX - 0);
+            lbState.ty = e.clientY - k * (e.clientY - 0);
+            // Clamp into reasonable area by recentering toward 0
+            lbApplyTransform();
+          }
+          lbState.lastTapMs = 0;
+        } else {
+          lbState.lastTapMs = now;
+          lbState.lastTapX = e.clientX;
+          lbState.lastTapY = e.clientY;
+        }
+      }
+      // Reset click suppression after a moment.
+      setTimeout(() => { lbState.suppressClick = false; }, 50);
+    }
+  }
+  stage.addEventListener("pointerup", endPointer);
+  stage.addEventListener("pointercancel", endPointer);
+  stage.addEventListener("pointerleave", endPointer);
+
+  // Mouse wheel zoom (desktop).
+  stage.addEventListener("wheel", (e) => {
+    if (!document.getElementById("photoLightbox").classList.contains("show")) return;
+    e.preventDefault();
+    const delta = -e.deltaY * 0.0025;
+    const oldScale = lbState.scale;
+    let newScale = Math.max(lbState.minScale, Math.min(lbState.maxScale, oldScale * (1 + delta)));
+    const k = newScale / oldScale;
+    lbState.scale = newScale;
+    lbState.tx = e.clientX - k * (e.clientX - lbState.tx);
+    lbState.ty = e.clientY - k * (e.clientY - lbState.ty);
+    lbApplyTransform();
+  }, { passive: false });
+}
+
 async function blkSubmit() {
   if (!blkCategoryPick) { toast(t("blkMissing"), true); return; }
 
@@ -3484,6 +3963,33 @@ document.getElementById("blkEndClear").addEventListener("click", () => {
   document.getElementById("blkEndAt").value = "";
 });
 document.getElementById("blkRefreshBtn").addEventListener("click", blkLoadOpen);
+// All-blockages browse button: open the sheet + lazy-load.
+document.getElementById("blkViewAllBtn").addEventListener("click", () => {
+  document.getElementById("blkAllOverlay").classList.add("show");
+  blkLoadAll();
+});
+document.getElementById("blkAllClose").addEventListener("click", () => {
+  document.getElementById("blkAllOverlay").classList.remove("show");
+});
+document.getElementById("blkAllRefreshBtn").addEventListener("click", blkLoadAll);
+document.getElementById("blkDetailClose").addEventListener("click", blkCloseDetail);
+document.getElementById("blkDetailBackBtn").addEventListener("click", blkCloseDetail);
+// Photo lightbox wiring (close + pointer events). Image events are set up
+// once at boot; opening the lightbox just swaps the src.
+document.getElementById("photoLightboxClose").addEventListener("click", closePhotoLightbox);
+document.getElementById("photoLightbox").addEventListener("click", (e) => {
+  // Tap outside the image closes — but only if the user didn't just drag/pinch.
+  if (e.target.id === "photoLightbox" || e.target.id === "photoLightboxStage") {
+    if (!lbState.suppressClick) closePhotoLightbox();
+  }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" &&
+      document.getElementById("photoLightbox").classList.contains("show")) {
+    closePhotoLightbox();
+  }
+});
+lbWirePointerEvents();
 // Manual edits to start/end datetimes win over shift-derived auto-fill.
 // We just mark the flag; future shift-chip toggles still recompute, but the
 // user can always click a shift chip again to re-apply if they want.
