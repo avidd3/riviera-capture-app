@@ -114,6 +114,21 @@
   .blkOpenItem .resolveBtn:active{background:#9a2f2f}
   .blkOpenItem .resolveBtn:disabled{background:#1f5a3f;color:#7fb89c;cursor:not-allowed}
   .blkRefresh{background:transparent;border:none;color:#7fb89c;font-size:11px;cursor:pointer;text-decoration:underline;padding:2px 0;margin-bottom:6px;display:block}
+  /* Activity composer (mirrors blockage, blue accent instead of orange) */
+  .actChipRow{display:flex;flex-wrap:wrap;gap:6px}
+  .actChipRow .pill{padding:9px 12px;font-size:14px;min-height:40px}
+  .actChipRow .pill.type{border-color:#3a6db8}
+  .actChipRow .pill.type.on{background:#1f4585;border-color:#3a6db8}
+  .actBtn{display:block;width:100%;background:#1f4585;color:#fff;border:none;border-radius:10px;padding:14px;font-size:16px;font-weight:700;cursor:pointer;margin-top:10px}
+  .actBtn:disabled{background:#1f5a3f;color:#7fb89c;cursor:not-allowed}
+  .actBtn:active:not(:disabled){background:#2a5aa5}
+  .actOpenList{margin-bottom:12px;display:flex;flex-direction:column;gap:6px}
+  .actOpenItem{background:#0d3b29;border:1px solid #2a7c54;border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .actOpenItem .info{flex:1;min-width:0;font-size:13px;color:#d3e6db;line-height:1.3}
+  .actOpenItem .info .sub{display:block;font-size:11px;color:#7fb89c;margin-top:2px}
+  .actOpenItem .endBtn{background:#1f4585;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .actOpenItem .endBtn:active{background:#2a5aa5}
+  .actOpenItem .endBtn:disabled{background:#1f5a3f;color:#7fb89c;cursor:not-allowed}
   /* Auto-info row (Core + Mast Climber under GW; Modules under Levels) */
   .autoInfo{margin-top:10px;padding:10px 12px;background:#0d3b29;border:1px solid #1f5a3f;border-radius:8px;font-size:13px;color:#d3e6db;display:flex;flex-wrap:wrap;gap:14px}
   .autoInfo.empty{display:none}
@@ -377,6 +392,79 @@
   <button type="button" class="blkBtn" id="blkSubmitBtn" data-i18n="blkSubmit">Log blockage</button>
 </section>
 
+<!-- 10. Activity — chip-based composer for time-bounded work sessions (no photo).
+     Mirrors the blockage composer pattern with an "Activity" colour accent. -->
+<section id="activitySection">
+  <h2><span data-i18n="sectionActivity">Activity</span> <span class="hint" data-i18n="sectionActivityHint">log a work session</span></h2>
+
+  <!-- Ongoing activities (this captain's). Refreshed on demand + after each submit. -->
+  <div id="actOpenWrap" style="display:none">
+    <label style="display:block;font-size:11px;color:#7fb89c;text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:4px"><span data-i18n="actOpenLabel">Ongoing activities</span></label>
+    <div class="actOpenList" id="actOpenList"></div>
+  </div>
+  <button type="button" class="blkRefresh" id="actRefreshBtn" data-i18n="actRefresh">↻ Refresh ongoing</button>
+
+  <!-- Activity type chips (single-select, required) -->
+  <div class="blkRow">
+    <label data-i18n="actType">Activity type</label>
+    <div class="actChipRow" id="actTypeRow"></div>
+  </div>
+
+  <!-- ITP chips (single-select, optional) -->
+  <div class="blkRow">
+    <label><span data-i18n="actItp">ITP</span> <span class="hint" data-i18n="optional">optional</span></label>
+    <div class="actChipRow" id="actItpRow"></div>
+  </div>
+
+  <!-- Core chips (single-select, optional) -->
+  <div class="blkRow">
+    <label><span data-i18n="actCore">Module type (Core)</span> <span class="hint" data-i18n="optional">optional</span></label>
+    <div class="actChipRow" id="actCoreRow"></div>
+  </div>
+
+  <!-- Green Wall chips (multi-select, optional) -->
+  <div class="blkRow">
+    <label><span data-i18n="blkGreenWall">Green Wall</span> <span class="hint" data-i18n="optionalMulti">optional · multi-select</span></label>
+    <div class="actChipRow" id="actGwRow"></div>
+  </div>
+
+  <!-- Mast climber chips (single-select, optional) -->
+  <div class="blkRow">
+    <label><span data-i18n="blkEmplacement">Emplacement (Mast Climber)</span> <span class="hint" data-i18n="optional">optional</span></label>
+    <div class="actChipRow" id="actMcRow"></div>
+  </div>
+
+  <!-- Level (free text, optional) -->
+  <div class="blkRow">
+    <label><span data-i18n="blkLevel">Level</span> <span class="hint" data-i18n="optional">optional</span></label>
+    <input type="text" id="actLevel" data-i18n-attr="placeholder:blkLevelPh" placeholder="e.g. L12">
+  </div>
+
+  <!-- Start/End datetimes. Start defaults to now; end blank = ongoing. -->
+  <div class="blkRow">
+    <div class="blkDtRow">
+      <div class="dt">
+        <label data-i18n="blkStartAt">Start</label>
+        <input type="datetime-local" id="actStartAt">
+        <button type="button" class="clearDt" id="actStartNow" data-i18n="blkUseNow">Use now</button>
+      </div>
+      <div class="dt">
+        <label><span data-i18n="blkEndAt">End</span> <span class="hint" data-i18n="optional">optional</span></label>
+        <input type="datetime-local" id="actEndAt">
+        <button type="button" class="clearDt" id="actEndClear" data-i18n="blkClearEnd">Clear (ongoing)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Free-text notes -->
+  <div class="blkRow">
+    <label><span data-i18n="blkNotes">Notes</span> <span class="hint" data-i18n="optional">optional</span></label>
+    <textarea id="actNotes" data-i18n-attr="placeholder:actNotesPh" placeholder="What was done?"></textarea>
+  </div>
+
+  <button type="button" class="actBtn" id="actSubmitBtn" data-i18n="actSubmit">Log activity</button>
+</section>
+
 </main>
 </div>
 
@@ -614,7 +702,40 @@ const I18N = {
     blkResolved: "Blocage résolu.",
     blkMissing: "Choisis une catégorie.",
     optionalMulti: "facultatif · multi-sélection",
-    blkErr: m => "Échec : " + m
+    blkErr: m => "Échec : " + m,
+    sectionActivity: "Activité",
+    sectionActivityHint: "enregistrer une session de travail",
+    actType: "Type d'activité",
+    actCatPrep: "Préparation",
+    actCatInstall: "Pose",
+    actCatInspectionPrep: "Préparation inspection",
+    actCatCleanup: "Nettoyage",
+    actCatAdmin: "Administratif",
+    actCatWait: "Attente",
+    actCatRework: "Reprise",
+    actCatOther: "Autre",
+    actItp: "ITP",
+    actItpBrackets: "Brackets",
+    actItpInsulation: "Isolation & PCF",
+    actItpBM: "BM",
+    actItpOmegas: "Omegas",
+    actItpGutter: "Gouttière",
+    actItpHRail: "H.Rail",
+    actItpBasket: "Panier",
+    actItpIrrigation: "Irrigation",
+    actItpPlants: "Plantes",
+    actItpNA: "N/A",
+    actCore: "Type de module (Cœur)",
+    actCoreBoth: "Les deux",
+    actSubmit: "Enregistrer l'activité",
+    actOpenLabel: "Activités en cours",
+    actRefresh: "↻ Rafraîchir",
+    actEndBtn: "Terminer (maintenant)",
+    actCreated: "Activité enregistrée.",
+    actEnded: "Activité terminée.",
+    actMissing: "Choisis un type d'activité.",
+    actNotesPh: "Qu'est-ce qui a été fait ?",
+    actErr: m => "Échec : " + m
   },
   en: {
     headerTitle: "Riviera Capture",
@@ -763,7 +884,40 @@ const I18N = {
     blkResolved: "Blockage resolved.",
     blkMissing: "Pick a category.",
     optionalMulti: "optional · multi-select",
-    blkErr: m => "Failed: " + m
+    blkErr: m => "Failed: " + m,
+    sectionActivity: "Activity",
+    sectionActivityHint: "log a work session",
+    actType: "Activity type",
+    actCatPrep: "Prep",
+    actCatInstall: "Install",
+    actCatInspectionPrep: "Inspection prep",
+    actCatCleanup: "Cleanup",
+    actCatAdmin: "Admin",
+    actCatWait: "Wait",
+    actCatRework: "Rework",
+    actCatOther: "Other",
+    actItp: "ITP",
+    actItpBrackets: "Brackets",
+    actItpInsulation: "Insulation & CB",
+    actItpBM: "BM",
+    actItpOmegas: "Omegas",
+    actItpGutter: "Gutter",
+    actItpHRail: "H.Rail",
+    actItpBasket: "Basket",
+    actItpIrrigation: "Irrigation",
+    actItpPlants: "Plants",
+    actItpNA: "N/A",
+    actCore: "Module type (Core)",
+    actCoreBoth: "Both",
+    actSubmit: "Log activity",
+    actOpenLabel: "Ongoing activities",
+    actRefresh: "↻ Refresh ongoing",
+    actEndBtn: "End (now)",
+    actCreated: "Activity logged.",
+    actEnded: "Activity ended.",
+    actMissing: "Pick an activity type.",
+    actNotesPh: "What was done?",
+    actErr: m => "Failed: " + m
   }
 };
 
@@ -803,6 +957,7 @@ function setLang(l) {
   renderThumbs();
   onFormChange();
   try { renderBlockage(); } catch (_e) {}
+  try { renderActivity(); } catch (_e) {}
 }
 
 // ============================================================
@@ -2786,6 +2941,257 @@ blkRenderChips();
 document.getElementById("blkStartAt").value = blkLocalDtValue(new Date());
 // Load open blockages on boot, but don't block. Errors stay silent (offline-friendly).
 blkLoadOpen();
+
+// Chip-based activity composer.
+//
+// Mirrors the blockage composer but for time-bounded work sessions (no photo).
+// activity_type required (chip), all other fields optional. Start defaults to
+// "now"; end blank = ongoing. One POST per activity via activityCreate.
+// Open-activities list is server-driven so captains can close from any device.
+
+const ACT_TYPES = [
+  // value is the enum value stored in DB; labelKey is the i18n short label.
+  { value: "prep",             labelKey: "actCatPrep" },
+  { value: "install",          labelKey: "actCatInstall" },
+  { value: "inspection_prep",  labelKey: "actCatInspectionPrep" },
+  { value: "cleanup",          labelKey: "actCatCleanup" },
+  { value: "admin",            labelKey: "actCatAdmin" },
+  { value: "wait",             labelKey: "actCatWait" },
+  { value: "rework",           labelKey: "actCatRework" },
+  { value: "other",            labelKey: "actCatOther" },
+];
+const ACT_ITPS = [
+  // value is the full enum string sent to the edge fn; labelKey is short chip label.
+  { value: "Brackets",                     labelKey: "actItpBrackets" },
+  { value: "Insulation & Cavity Barrier",  labelKey: "actItpInsulation" },
+  { value: "Breather Membrane",            labelKey: "actItpBM" },
+  { value: "Omegas",                       labelKey: "actItpOmegas" },
+  { value: "Gutter",                       labelKey: "actItpGutter" },
+  { value: "H.Rail",                       labelKey: "actItpHRail" },
+  { value: "Basket",                       labelKey: "actItpBasket" },
+  { value: "Irrigation",                   labelKey: "actItpIrrigation" },
+  { value: "Plants",                       labelKey: "actItpPlants" },
+  { value: "N/A",                          labelKey: "actItpNA" },
+];
+const ACT_CORES = [
+  // "both" is a UI convenience — when both is picked we send null core and let
+  // the captain rely on GW/level/module_name for disambiguation.
+  { value: "A",    labelKey: null },
+  { value: "B",    labelKey: null },
+  { value: "both", labelKey: "actCoreBoth" },
+];
+const ACT_MCS = ["MC 7", "MC 15", "MC 16"];
+const ACT_GWS = ["GW 1", "GW 2", "GW 3", "GW 4"];
+
+let actTypePick = null;        // string enum value, or null
+let actItpPick  = null;        // full ITP label, or null
+let actCorePick = null;        // "A" | "B" | "both" | null
+let actMcPick   = null;        // string label, or null
+const actGwPicks = new Set();  // strings (GW 1 etc.)
+
+function actBuildSingleChips(rowId, options, getSelected, setSelected, extraCls = "") {
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  row.innerHTML = "";
+  options.forEach(opt => {
+    const val = typeof opt === "string" ? opt : opt.value;
+    const lbl = typeof opt === "string"
+      ? opt
+      : (opt.labelKey ? t(opt.labelKey) : opt.value);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "pill " + extraCls + (getSelected() === val ? " on" : "");
+    b.textContent = lbl;
+    b.dataset.val = val;
+    b.addEventListener("click", () => {
+      setSelected(getSelected() === val ? null : val);
+      row.querySelectorAll(".pill").forEach(p => p.classList.toggle("on", p.dataset.val === getSelected()));
+    });
+    row.appendChild(b);
+  });
+}
+
+function actBuildMultiChips(rowId, options, set) {
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  row.innerHTML = "";
+  options.forEach(val => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "pill" + (set.has(val) ? " on" : "");
+    b.textContent = val;
+    b.dataset.val = val;
+    b.addEventListener("click", () => {
+      if (set.has(val)) set.delete(val); else set.add(val);
+      b.classList.toggle("on", set.has(val));
+    });
+    row.appendChild(b);
+  });
+}
+
+function actLocalDtValue(d) {
+  const p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function actRenderChips() {
+  actBuildSingleChips("actTypeRow", ACT_TYPES,
+    () => actTypePick, v => { actTypePick = v; }, "type");
+  actBuildSingleChips("actItpRow", ACT_ITPS,
+    () => actItpPick, v => { actItpPick = v; });
+  actBuildSingleChips("actCoreRow", ACT_CORES,
+    () => actCorePick, v => { actCorePick = v; });
+  actBuildMultiChips("actGwRow", ACT_GWS, actGwPicks);
+  actBuildSingleChips("actMcRow", ACT_MCS,
+    () => actMcPick, v => { actMcPick = v; });
+}
+
+function actResetForm() {
+  actTypePick = null;
+  actItpPick = null;
+  actCorePick = null;
+  actMcPick = null;
+  actGwPicks.clear();
+  actRenderChips();
+  document.getElementById("actLevel").value = "";
+  document.getElementById("actStartAt").value = actLocalDtValue(new Date());
+  document.getElementById("actEndAt").value = "";
+  document.getElementById("actNotes").value = "";
+}
+
+let actOpenCache = [];
+async function actLoadOpen() {
+  try {
+    const res = await fnCall({ mode: "activityList" });
+    actOpenCache = Array.isArray(res.activities) ? res.activities : [];
+    LOG("act.list.ok", "n=" + actOpenCache.length);
+  } catch (e) {
+    LOG("err.act.list", String(e.message || e));
+  }
+  actRenderOpen();
+}
+
+function actRenderOpen() {
+  const wrap = document.getElementById("actOpenWrap");
+  const list = document.getElementById("actOpenList");
+  if (!wrap || !list) return;
+  if (actOpenCache.length === 0) {
+    wrap.style.display = "none";
+    list.innerHTML = "";
+    return;
+  }
+  wrap.style.display = "";
+  list.innerHTML = "";
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+  actOpenCache.forEach(a => {
+    const parts = [];
+    if (a.activity_type) parts.push(a.activity_type.replace(/_/g, " "));
+    if (a.itp) parts.push(a.itp);
+    if (a.mast_climber) parts.push(a.mast_climber);
+    if (a.green_wall) parts.push(a.green_wall);
+    if (a.level) parts.push(a.level);
+    const sub = a.start_at ? new Date(a.start_at).toLocaleString() : "";
+    const item = document.createElement("div");
+    item.className = "actOpenItem";
+    item.innerHTML = `<div class="info">${esc(parts.join(" · "))}<span class="sub">${esc(sub)}</span></div>` +
+                     `<button type="button" class="endBtn" data-id="${esc(a.id)}">${esc(t("actEndBtn"))}</button>`;
+    item.querySelector(".endBtn").addEventListener("click", (ev) => actEnd(a.id, ev.currentTarget));
+    list.appendChild(item);
+  });
+}
+
+async function actEnd(id, btn) {
+  if (!id) return;
+  if (btn) btn.disabled = true;
+  LOG("act.end", "id=" + id.slice(0, 8));
+  try {
+    await fnCall({ mode: "activityEnd", activityId: id });
+    actOpenCache = actOpenCache.filter(x => x.id !== id);
+    actRenderOpen();
+    LOG("act.end.ok", "id=" + id.slice(0, 8));
+    toast(t("actEnded"));
+    actLoadOpen();
+  } catch (e) {
+    LOG("err.act.end", String(e.message || e));
+    toast(t("actErr", e.message || String(e)), true);
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function actSubmit() {
+  if (!actTypePick) { toast(t("actMissing"), true); return; }
+
+  const startVal = document.getElementById("actStartAt").value || actLocalDtValue(new Date());
+  const endVal   = document.getElementById("actEndAt").value || null;
+  const notes    = document.getElementById("actNotes").value.trim();
+  const level    = document.getElementById("actLevel").value.trim();
+
+  // Core: "both" → null core + module_name will note both. Otherwise A/B as-is.
+  const coreOut = (actCorePick === "A" || actCorePick === "B") ? actCorePick : null;
+
+  // Green walls: first selected (normalised) goes into green_wall column; full
+  // joined list (or "both cores") goes into module_name for human-readable cuts.
+  const gwListRaw = Array.from(actGwPicks);
+  const firstGw   = gwListRaw.length > 0 ? gwListRaw[0].replace(/\s+/g, "") : null;
+  const modParts  = [];
+  if (gwListRaw.length > 0) modParts.push(gwListRaw.join(", "));
+  if (actCorePick === "both") modParts.push("Core A+B");
+  const moduleName = modParts.length > 0 ? modParts.join(" · ") : null;
+
+  const fields = {
+    activity_type: actTypePick,
+    itp: actItpPick || null,
+    core: coreOut,
+    green_wall: firstGw,
+    mast_climber: actMcPick ? actMcPick.replace(/\s+/g, "") : null,
+    level: level || null,
+    module_name: moduleName,
+    start_at: startVal,
+    end_at: endVal,
+    notes: notes || null
+  };
+
+  const btn = document.getElementById("actSubmitBtn");
+  btn.disabled = true;
+  LOG("act.create", "type=" + actTypePick,
+      "itp=" + (actItpPick || "-"),
+      "mc=" + (actMcPick || "-"),
+      "gws=" + (gwListRaw.join(",") || "-"),
+      "ongoing=" + (endVal ? "no" : "yes"));
+  try {
+    const res = await fnCall({ mode: "activityCreate", activityFields: fields });
+    if (!res.activityId) throw new Error("no activityId returned");
+    LOG("act.create.ok", "id=" + res.activityId.slice(0, 8));
+    toast(t("actCreated"));
+    actResetForm();
+    actLoadOpen();
+  } catch (e) {
+    LOG("err.act.create", String(e.message || e));
+    toast(t("actErr", e.message || String(e)), true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Re-render on language change so chip labels update.
+function renderActivity() {
+  actRenderChips();
+  actRenderOpen();
+}
+
+// Wire up.
+document.getElementById("actSubmitBtn").addEventListener("click", actSubmit);
+document.getElementById("actStartNow").addEventListener("click", () => {
+  document.getElementById("actStartAt").value = actLocalDtValue(new Date());
+});
+document.getElementById("actEndClear").addEventListener("click", () => {
+  document.getElementById("actEndAt").value = "";
+});
+document.getElementById("actRefreshBtn").addEventListener("click", actLoadOpen);
+
+actRenderChips();
+document.getElementById("actStartAt").value = actLocalDtValue(new Date());
+actLoadOpen();
 
 // Language toggle
 document.querySelectorAll(".langBtn").forEach(b =>
