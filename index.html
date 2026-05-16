@@ -432,6 +432,19 @@
     <div class="blkChipRow" id="blkGwRow"></div>
   </div>
 
+  <!-- Shifts (multi-select). "Entire day" is a meta-chip: selecting it
+       turns on the four real shift chips and auto-fills 07:00-22:00. -->
+  <div class="blkRow">
+    <label><span data-i18n="blkShiftsLabel">Shifts</span> <span class="hint" data-i18n="optionalMulti">optional · multi-select</span></label>
+    <div class="blkChipRow" id="blkShiftRow"></div>
+  </div>
+
+  <!-- Teams impacted (multi-select). -->
+  <div class="blkRow">
+    <label><span data-i18n="blkTeamsLabel">Teams impacted</span> <span class="hint" data-i18n="optionalMulti">optional · multi-select</span></label>
+    <div class="blkChipRow" id="blkTeamRow"></div>
+  </div>
+
   <!-- Start/End datetimes. Start defaults to now; end blank = still ongoing. -->
   <div class="blkRow">
     <div class="blkDtRow">
@@ -779,6 +792,11 @@ const I18N = {
     blkMissing: "Choisis une catégorie.",
     optionalMulti: "facultatif · multi-sélection",
     blkErr: m => "Échec : " + m,
+    blkShiftsLabel: "Tranches horaires",
+    blkShiftEntireDay: "Journée entière",
+    blkTeamsLabel: "Équipes impactées",
+    blkTeamA: "Équipe A",
+    blkTeamB: "Équipe B",
     sectionActivity: "Activité",
     sectionActivityHint: "enregistrer une session de travail",
     actType: "Type d'activité",
@@ -970,6 +988,11 @@ const I18N = {
     blkMissing: "Pick a category.",
     optionalMulti: "optional · multi-select",
     blkErr: m => "Failed: " + m,
+    blkShiftsLabel: "Shifts",
+    blkShiftEntireDay: "Entire day",
+    blkTeamsLabel: "Teams impacted",
+    blkTeamA: "Team A",
+    blkTeamB: "Team B",
     sectionActivity: "Activity",
     sectionActivityHint: "log a work session",
     actType: "Activity type",
@@ -2951,11 +2974,26 @@ const BLK_CATEGORIES = [
 ];
 const BLK_MCS  = ["MC 7", "MC 15", "MC 16"];
 const BLK_GWS  = ["GW 1", "GW 2", "GW 3", "GW 4"];
+// Real shifts (the four time windows). "Entire day" is a meta-chip handled
+// separately — it toggles all four on/off and auto-fills the datetime fields.
+const BLK_SHIFTS = ["7h-11h", "11h-15h", "15h-18h", "18h-22h"];
+const BLK_SHIFT_BOUNDS = {
+  "7h-11h":  { startH: 7,  endH: 11 },
+  "11h-15h": { startH: 11, endH: 15 },
+  "15h-18h": { startH: 15, endH: 18 },
+  "18h-22h": { startH: 18, endH: 22 },
+};
+const BLK_TEAMS = [
+  { value: "Team A", labelKey: "blkTeamA" },
+  { value: "Team B", labelKey: "blkTeamB" },
+];
 
 // State held outside the DOM so language re-renders preserve selections.
 let blkCategoryPick = null;        // string label, or null
 let blkMcPick       = null;        // string label, or null
 const blkGwPicks    = new Set();   // strings
+const blkShiftPicks = new Set();   // strings (the 4 real shifts; "Entire day" is virtual)
+const blkTeamPicks  = new Set();   // strings ("Team A", "Team B")
 
 // Build a row of single-select chips. Renders into rowId; returns nothing
 // (state lives in the caller's variable closure via setter callback).
@@ -3006,18 +3044,118 @@ function blkLocalDtValue(d) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+// Derive the date used for shift-bound auto-fill: prefer whatever's already in
+// the start_at field (so picking shifts on a back-dated blockage uses that date),
+// otherwise today.
+function blkShiftDateBase() {
+  const v = (document.getElementById("blkStartAt") || {}).value || "";
+  if (v) {
+    // datetime-local format is "YYYY-MM-DDTHH:MM" — slice off the date part.
+    const d = new Date(v);
+    if (!isNaN(d.getTime())) {
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+  }
+  const t = new Date();
+  t.setHours(0, 0, 0, 0);
+  return t;
+}
+
+// Recompute start_at / end_at from the currently-selected shift set, unless
+// the user has manually edited those fields after picking the first shift
+// (tracked via the blkShiftAutoFilled flag).
+let blkShiftAutoFilled = false;
+function blkApplyShiftBounds() {
+  if (blkShiftPicks.size === 0) return;
+  let minH = 24, maxH = 0;
+  for (const s of blkShiftPicks) {
+    const b = BLK_SHIFT_BOUNDS[s];
+    if (!b) continue;
+    if (b.startH < minH) minH = b.startH;
+    if (b.endH   > maxH) maxH = b.endH;
+  }
+  if (minH >= maxH) return;
+  const base = blkShiftDateBase();
+  const start = new Date(base); start.setHours(minH, 0, 0, 0);
+  const end   = new Date(base); end.setHours(maxH, 0, 0, 0);
+  document.getElementById("blkStartAt").value = blkLocalDtValue(start);
+  document.getElementById("blkEndAt").value   = blkLocalDtValue(end);
+  blkShiftAutoFilled = true;
+}
+
+// Build the shift row, including the "Entire day" meta-chip at position 0.
+function blkBuildShiftChips() {
+  const row = document.getElementById("blkShiftRow");
+  if (!row) return;
+  row.innerHTML = "";
+
+  // Helper to repaint chip on/off state across the whole row.
+  const repaint = () => {
+    row.querySelectorAll(".pill").forEach(p => {
+      const v = p.dataset.val;
+      if (v === "__entire__") {
+        p.classList.toggle("on", blkShiftPicks.size === BLK_SHIFTS.length);
+      } else {
+        p.classList.toggle("on", blkShiftPicks.has(v));
+      }
+    });
+  };
+
+  // Entire-day meta-chip.
+  const all = document.createElement("button");
+  all.type = "button";
+  all.className = "pill";
+  all.textContent = t("blkShiftEntireDay");
+  all.dataset.val = "__entire__";
+  all.addEventListener("click", () => {
+    if (blkShiftPicks.size === BLK_SHIFTS.length) {
+      // Already all-selected → deselect all (and clear the auto-filled bounds).
+      blkShiftPicks.clear();
+    } else {
+      blkShiftPicks.clear();
+      BLK_SHIFTS.forEach(s => blkShiftPicks.add(s));
+      blkApplyShiftBounds();
+    }
+    repaint();
+  });
+  row.appendChild(all);
+
+  // Real shift chips.
+  BLK_SHIFTS.forEach(s => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "pill" + (blkShiftPicks.has(s) ? " on" : "");
+    b.textContent = s;
+    b.dataset.val = s;
+    b.addEventListener("click", () => {
+      if (blkShiftPicks.has(s)) blkShiftPicks.delete(s); else blkShiftPicks.add(s);
+      if (blkShiftPicks.size > 0) blkApplyShiftBounds();
+      repaint();
+    });
+    row.appendChild(b);
+  });
+
+  repaint();
+}
+
 function blkRenderChips() {
   blkBuildSingleChips("blkCatRow", BLK_CATEGORIES,
     () => blkCategoryPick, v => { blkCategoryPick = v; }, "cat");
   blkBuildSingleChips("blkMcRow", BLK_MCS,
     () => blkMcPick, v => { blkMcPick = v; });
   blkBuildMultiChips("blkGwRow", BLK_GWS, blkGwPicks);
+  blkBuildShiftChips();
+  blkBuildMultiChips("blkTeamRow", BLK_TEAMS.map(o => o.value), blkTeamPicks);
 }
 
 function blkResetForm() {
   blkCategoryPick = null;
   blkMcPick = null;
   blkGwPicks.clear();
+  blkShiftPicks.clear();
+  blkTeamPicks.clear();
+  blkShiftAutoFilled = false;
   blkRenderChips();
   document.getElementById("blkStartAt").value = blkLocalDtValue(new Date());
   document.getElementById("blkEndAt").value = "";
@@ -3057,6 +3195,10 @@ function blkRenderOpen() {
     if (b.mast_climber) parts.push(b.mast_climber);
     if (b.zone) parts.push(b.zone);
     else if (b.green_wall) parts.push(b.green_wall);
+    if (Array.isArray(b.shifts) && b.shifts.length)
+      parts.push(b.shifts.join(", "));
+    if (Array.isArray(b.teams_impacted) && b.teams_impacted.length)
+      parts.push(b.teams_impacted.join(", "));
     const sub = b.start_at ? new Date(b.start_at).toLocaleString() : "";
     const item = document.createElement("div");
     item.className = "blkOpenItem";
@@ -3102,6 +3244,8 @@ async function blkSubmit() {
     category: blkCategoryPick,
     mast_climber: blkMcPick || null,
     green_walls: Array.from(blkGwPicks),
+    shifts: Array.from(blkShiftPicks),
+    teams_impacted: Array.from(blkTeamPicks),
     start_at: startVal,
     end_at: endVal,
     description: notes
@@ -3146,6 +3290,13 @@ document.getElementById("blkEndClear").addEventListener("click", () => {
   document.getElementById("blkEndAt").value = "";
 });
 document.getElementById("blkRefreshBtn").addEventListener("click", blkLoadOpen);
+// Manual edits to start/end datetimes win over shift-derived auto-fill.
+// We just mark the flag; future shift-chip toggles still recompute, but the
+// user can always click a shift chip again to re-apply if they want.
+["blkStartAt", "blkEndAt"].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener("input", () => { blkShiftAutoFilled = false; });
+});
 
 // Initial render: chips, start=now, open list (fires fnCall in background).
 blkRenderChips();
