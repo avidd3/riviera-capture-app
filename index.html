@@ -1199,13 +1199,13 @@ const TAG_SECTIONS = [
   { id: "pool", titleKey: "tagSecPoolPlanter", cssCategory: "planter", tags: [
     "Pool Planter - Inspection Box - R", "Pool Planter - Inspection Box - L",
     "Pool Planter - Evacuation Connection - R", "Pool Planter - Evacuation Connection - L",
-    // Layer stack, bottom-up (above the concrete slab, which is not Tracer's scope):
+    // Layer stack, bottom-up (above the concrete slab, which is not Tracer's scope).
+    // Substrate / Mulch / Mulching Fabric are shared across ALL planter types and
+    // live in the Planter section — not duplicated here.
     "Pool Planter - Anti-root membrane FLW-400",
     "Pool Planter - Moisture retention mat VLS-500",
     "Pool Planter - Drainage board DiaDrain-25H",
     "Pool Planter - Filter sheet VLF-150",
-    "Pool Planter - Substrate",
-    "Pool Planter - Mulch",
   ]},
   { id: "status", titleKey: "tagSecStatus", cssCategory: "status", tags: [
     "Defect", "Rework", "Issue to Report",
@@ -1262,8 +1262,6 @@ const TAG_LABELS_FR = {
   "Pool Planter - Moisture retention mat VLS-500":  "Tapis rétention d'humidité VLS-500, Piscine",
   "Pool Planter - Drainage board DiaDrain-25H":     "Plaque de drainage DiaDrain-25H, Piscine",
   "Pool Planter - Filter sheet VLF-150":            "Feutre filtre VLF-150, Piscine",
-  "Pool Planter - Substrate":                       "Substrat, Piscine",
-  "Pool Planter - Mulch":                           "Paillis, Piscine",
   // Status
   "Defect":                         "Défaut",
   "Rework":                         "Reprise",
