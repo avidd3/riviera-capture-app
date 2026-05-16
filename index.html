@@ -1199,9 +1199,12 @@ const TAG_SECTIONS = [
   { id: "pool", titleKey: "tagSecPoolPlanter", cssCategory: "planter", tags: [
     "Pool Planter - Inspection Box - R", "Pool Planter - Inspection Box - L",
     "Pool Planter - Evacuation Connection - R", "Pool Planter - Evacuation Connection - L",
-    "Pool Planter - Drainage Board",
-    "Pool Planter - layer 1", "Pool Planter - layer 2",
-    "Pool Planter - layer 3", "Pool Planter - layer 4",
+    // Layer stack, bottom-up (above the concrete slab, which is not Tracer's scope):
+    "Pool Planter - Anti-root membrane FLW-400",
+    "Pool Planter - Moisture retention mat VLS-500",
+    "Pool Planter - Drainage board DiaDrain-25H",
+    "Pool Planter - Filter sheet VLF-150",
+    "Pool Planter - Substrate",
     "Pool Planter - Mulch",
   ]},
   { id: "status", titleKey: "tagSecStatus", cssCategory: "status", tags: [
@@ -1248,17 +1251,17 @@ const TAG_LABELS_FR = {
   "Evacuation": "Évacuation",
   "Evacuation Connection": "Raccord évacuation",
   "Substrate": "Substrat",
-  // Pool planter (detailed layers)
+  // Pool planter — concrete slab is not Tracer's scope; layer stack starts above it.
   "Pool Planter - Inspection Box - R": "Bac piscine - Regard - D",
   "Pool Planter - Inspection Box - L": "Bac piscine - Regard - G",
   "Pool Planter - Evacuation Connection - R": "Bac piscine - Raccord évac. - D",
   "Pool Planter - Evacuation Connection - L": "Bac piscine - Raccord évac. - G",
-  "Pool Planter - Drainage Board": "Bac piscine - Plaque de drainage",
-  "Pool Planter - layer 1": "Bac piscine - couche 1",
-  "Pool Planter - layer 2": "Bac piscine - couche 2",
-  "Pool Planter - layer 3": "Bac piscine - couche 3",
-  "Pool Planter - layer 4": "Bac piscine - couche 4",
-  "Pool Planter - Mulch": "Bac piscine - Paillis",
+  "Pool Planter - Anti-root membrane FLW-400":      "Bac piscine - Membrane anti-racines FLW-400",
+  "Pool Planter - Moisture retention mat VLS-500":  "Bac piscine - Tapis rétention d'humidité VLS-500",
+  "Pool Planter - Drainage board DiaDrain-25H":     "Bac piscine - Plaque de drainage DiaDrain-25H",
+  "Pool Planter - Filter sheet VLF-150":            "Bac piscine - Feutre filtre VLF-150",
+  "Pool Planter - Substrate":                       "Bac piscine - Substrat",
+  "Pool Planter - Mulch":                           "Bac piscine - Paillis",
   // Status
   "Defect": "Défaut",
   "Rework": "Reprise",
