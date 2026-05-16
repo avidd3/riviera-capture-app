@@ -445,18 +445,30 @@
     <div class="blkChipRow" id="blkTeamRow"></div>
   </div>
 
-  <!-- Start/End datetimes. Start defaults to now; end blank = still ongoing. -->
-  <div class="blkRow">
+  <!-- Start/End datetimes. Start defaults to now; end blank = still ongoing.
+       When any shift is picked, this row is hidden and #blkDateRow takes over. -->
+  <div class="blkRow" id="blkDateTimeRow">
     <div class="blkDtRow">
       <div class="dt">
         <label data-i18n="blkStartAt">Start</label>
         <input type="datetime-local" id="blkStartAt">
         <button type="button" class="clearDt" id="blkStartNow" data-i18n="blkUseNow">Use now</button>
       </div>
-      <div class="dt">
+      <div class="dt" id="blkEndAtWrap">
         <label><span data-i18n="blkEndAt">End</span> <span class="hint" data-i18n="optional">optional</span></label>
         <input type="datetime-local" id="blkEndAt">
         <button type="button" class="clearDt" id="blkEndClear" data-i18n="blkClearEnd">Clear (ongoing)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Work date (date-only). Shown when at least one shift is picked; the
+       start_at / end_at are derived from this date + the min/max shift bounds. -->
+  <div class="blkRow" id="blkDateRow" style="display:none">
+    <div class="blkDtRow">
+      <div class="dt">
+        <label data-i18n="blkWorkDateLabel">Work date</label>
+        <input type="date" id="blkWorkDate">
       </div>
     </div>
   </div>
@@ -755,6 +767,9 @@ const I18N = {
     blkChoose: "— choisir —",
     blkNone: "— aucun —",
     blkCatTracer: "Sécurité (tracer)",
+    blkCatTracerSafety: "Sécurité (Tracer)",
+    blkCatBbiSafety: "Sécurité (BBI-Intrakat)",
+    blkWorkDateLabel: "Date du travail",
     blkCatExclusion: "Zone d'exclusion",
     blkCatMaterial: "Matériel manquant",
     blkCatWeather: "Météo",
@@ -951,6 +966,9 @@ const I18N = {
     blkChoose: "— choose —",
     blkNone: "— none —",
     blkCatTracer: "Safety (tracer)",
+    blkCatTracerSafety: "Safety (Tracer)",
+    blkCatBbiSafety: "Safety (BBI-Intrakat)",
+    blkWorkDateLabel: "Work date",
     blkCatExclusion: "Exclusion zone",
     blkCatMaterial: "Material missing",
     blkCatWeather: "Weather",
@@ -2969,7 +2987,8 @@ const BLK_CATEGORIES = [
   { value: "Problème d'équipe",  labelKey: "blkCatCrew" },
   { value: "Météo",              labelKey: "blkCatWeather" },
   { value: "Matériel manquant",  labelKey: "blkCatMaterial" },
-  { value: "Sécurité",           labelKey: "blkCatTracer" },
+  { value: "Sécurité (Tracer)",      labelKey: "blkCatTracerSafety" },
+  { value: "Sécurité (BBI-Intrakat)", labelKey: "blkCatBbiSafety" },
   { value: "Divers",             labelKey: "blkCatOther" },
 ];
 const BLK_MCS  = ["MC 7", "MC 15", "MC 16"];
@@ -3044,13 +3063,24 @@ function blkLocalDtValue(d) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-// Derive the date used for shift-bound auto-fill: prefer whatever's already in
-// the start_at field (so picking shifts on a back-dated blockage uses that date),
-// otherwise today.
+// Local-date YYYY-MM-DD helper for the <input type="date"> field.
+function blkLocalDateValue(d) {
+  const p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+// Derive the date used for shift-bound auto-fill. When shift mode is active,
+// pull from #blkWorkDate. Otherwise fall back to the datetime-local start, or
+// today.
 function blkShiftDateBase() {
+  const wd = (document.getElementById("blkWorkDate") || {}).value || "";
+  if (wd) {
+    // YYYY-MM-DD — parse as local midnight to dodge UTC drift.
+    const [y, m, d] = wd.split("-").map(Number);
+    if (y && m && d) return new Date(y, m - 1, d, 0, 0, 0, 0);
+  }
   const v = (document.getElementById("blkStartAt") || {}).value || "";
   if (v) {
-    // datetime-local format is "YYYY-MM-DDTHH:MM" — slice off the date part.
     const d = new Date(v);
     if (!isNaN(d.getTime())) {
       d.setHours(0, 0, 0, 0);
@@ -3062,12 +3092,63 @@ function blkShiftDateBase() {
   return t;
 }
 
-// Recompute start_at / end_at from the currently-selected shift set, unless
-// the user has manually edited those fields after picking the first shift
-// (tracked via the blkShiftAutoFilled flag).
+// Show/hide the date-only vs datetime-local inputs based on whether any shift
+// is picked. When entering shift mode, seed #blkWorkDate from the current
+// start_at; when leaving, seed start_at back from the work date (preserving
+// the user's choice of day).
+function blkApplyTimeMode() {
+  const dtRow   = document.getElementById("blkDateTimeRow");
+  const dateRow = document.getElementById("blkDateRow");
+  if (!dtRow || !dateRow) return;
+  const inShiftMode = blkShiftPicks.size > 0;
+  if (inShiftMode) {
+    if (dtRow.style.display !== "none") {
+      // Transition into shift mode: seed work date from start_at (or today).
+      const startVal = (document.getElementById("blkStartAt") || {}).value || "";
+      let base = new Date();
+      if (startVal) {
+        const d = new Date(startVal);
+        if (!isNaN(d.getTime())) base = d;
+      }
+      document.getElementById("blkWorkDate").value = blkLocalDateValue(base);
+    }
+    dtRow.style.display = "none";
+    dateRow.style.display = "";
+  } else {
+    if (dateRow.style.display !== "none") {
+      // Transition out of shift mode: seed start_at from the work date (so the
+      // captain doesn't lose their chosen day), end_at blank (ongoing).
+      const wd = (document.getElementById("blkWorkDate") || {}).value || "";
+      if (wd) {
+        const [y, m, d] = wd.split("-").map(Number);
+        if (y && m && d) {
+          const base = new Date(y, m - 1, d, new Date().getHours(), 0, 0, 0);
+          document.getElementById("blkStartAt").value = blkLocalDtValue(base);
+        }
+      } else if (!document.getElementById("blkStartAt").value) {
+        document.getElementById("blkStartAt").value = blkLocalDtValue(new Date());
+      }
+      document.getElementById("blkEndAt").value = "";
+    }
+    dtRow.style.display = "";
+    dateRow.style.display = "none";
+  }
+}
+
+// (Legacy hook kept so any other call sites compile; no-op since shift mode
+// now derives bounds at submit time from the work-date input.)
 let blkShiftAutoFilled = false;
 function blkApplyShiftBounds() {
+  // Ensure the work-date input has a value when a shift is first picked.
   if (blkShiftPicks.size === 0) return;
+  const wdEl = document.getElementById("blkWorkDate");
+  if (wdEl && !wdEl.value) wdEl.value = blkLocalDateValue(new Date());
+}
+
+// Compute start_at / end_at ISO-local strings from the work-date + selected
+// shift set. Returns null if no shifts or no work date.
+function blkComputeShiftBounds() {
+  if (blkShiftPicks.size === 0) return null;
   let minH = 24, maxH = 0;
   for (const s of blkShiftPicks) {
     const b = BLK_SHIFT_BOUNDS[s];
@@ -3075,13 +3156,11 @@ function blkApplyShiftBounds() {
     if (b.startH < minH) minH = b.startH;
     if (b.endH   > maxH) maxH = b.endH;
   }
-  if (minH >= maxH) return;
+  if (minH >= maxH) return null;
   const base = blkShiftDateBase();
   const start = new Date(base); start.setHours(minH, 0, 0, 0);
   const end   = new Date(base); end.setHours(maxH, 0, 0, 0);
-  document.getElementById("blkStartAt").value = blkLocalDtValue(start);
-  document.getElementById("blkEndAt").value   = blkLocalDtValue(end);
-  blkShiftAutoFilled = true;
+  return { start: blkLocalDtValue(start), end: blkLocalDtValue(end) };
 }
 
 // Build the shift row, including the "Entire day" meta-chip at position 0.
@@ -3117,6 +3196,7 @@ function blkBuildShiftChips() {
       BLK_SHIFTS.forEach(s => blkShiftPicks.add(s));
       blkApplyShiftBounds();
     }
+    blkApplyTimeMode();
     repaint();
   });
   row.appendChild(all);
@@ -3131,6 +3211,7 @@ function blkBuildShiftChips() {
     b.addEventListener("click", () => {
       if (blkShiftPicks.has(s)) blkShiftPicks.delete(s); else blkShiftPicks.add(s);
       if (blkShiftPicks.size > 0) blkApplyShiftBounds();
+      blkApplyTimeMode();
       repaint();
     });
     row.appendChild(b);
@@ -3139,12 +3220,113 @@ function blkBuildShiftChips() {
   repaint();
 }
 
+// MC ↔ GW mapping (mirrors GW_DEFAULTS in photo capture):
+//   MC 7  ↔ GW 1
+//   MC 15 ↔ GW 4
+//   MC 16 ↔ GW 2 + GW 3  (services both)
+const BLK_MC_TO_GWS = {
+  "MC 7":  ["GW 1"],
+  "MC 15": ["GW 4"],
+  "MC 16": ["GW 2", "GW 3"],
+};
+const BLK_GW_TO_MC = {
+  "GW 1": "MC 7",
+  "GW 2": "MC 16",
+  "GW 3": "MC 16",
+  "GW 4": "MC 15",
+};
+
+// Sync the MC and GW selections after a change. `source` tells us which side
+// triggered the sync so we don't loop forever.
+//   - "mc": user just toggled an MC chip → set blkGwPicks to its GW(s) (or clear if no MC)
+//   - "gw": user just toggled a GW chip → set blkMcPick to that GW's MC, and
+//           if a sibling GW shares the same MC ensure it's also selected (so
+//           GW2 auto-picks GW3 — they pair on MC16). If no GWs remain for that
+//           MC, clear blkMcPick.
+function blkSyncMcGw(source) {
+  if (source === "mc") {
+    blkGwPicks.clear();
+    if (blkMcPick && BLK_MC_TO_GWS[blkMcPick]) {
+      BLK_MC_TO_GWS[blkMcPick].forEach(gw => blkGwPicks.add(gw));
+    }
+    return;
+  }
+  if (source === "gw") {
+    // Find MCs still represented by the current GW selection.
+    const mcsRepresented = new Set();
+    for (const gw of blkGwPicks) {
+      const mc = BLK_GW_TO_MC[gw];
+      if (mc) mcsRepresented.add(mc);
+    }
+    if (mcsRepresented.size === 0) {
+      blkMcPick = null;
+      return;
+    }
+    if (mcsRepresented.size === 1) {
+      const mc = mcsRepresented.values().next().value;
+      blkMcPick = mc;
+      // Auto-pair sibling GWs (MC16 → GW2 + GW3 always travel together).
+      BLK_MC_TO_GWS[mc].forEach(gw => blkGwPicks.add(gw));
+      return;
+    }
+    // Multiple MCs in play (shouldn't normally happen since sibling-pairing
+    // keeps things tight, but guard anyway): leave blkMcPick alone.
+  }
+}
+
+// MC chip row with sync. Single-select; toggle off if same chip tapped again.
+function blkBuildMcChips() {
+  const rowId = "blkMcRow";
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  row.innerHTML = "";
+  BLK_MCS.forEach(val => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "pill" + (blkMcPick === val ? " on" : "");
+    b.textContent = val;
+    b.dataset.val = val;
+    b.addEventListener("click", () => {
+      blkMcPick = (blkMcPick === val) ? null : val;
+      blkSyncMcGw("mc");
+      // Repaint MC row (single-select) + GW row (set changed).
+      row.querySelectorAll(".pill").forEach(p => p.classList.toggle("on", p.dataset.val === blkMcPick));
+      const gwRow = document.getElementById("blkGwRow");
+      if (gwRow) gwRow.querySelectorAll(".pill").forEach(p => p.classList.toggle("on", blkGwPicks.has(p.dataset.val)));
+    });
+    row.appendChild(b);
+  });
+}
+
+// GW chip row with sync. Multi-select.
+function blkBuildGwChips() {
+  const rowId = "blkGwRow";
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  row.innerHTML = "";
+  BLK_GWS.forEach(val => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "pill" + (blkGwPicks.has(val) ? " on" : "");
+    b.textContent = val;
+    b.dataset.val = val;
+    b.addEventListener("click", () => {
+      if (blkGwPicks.has(val)) blkGwPicks.delete(val); else blkGwPicks.add(val);
+      blkSyncMcGw("gw");
+      // Repaint both rows.
+      row.querySelectorAll(".pill").forEach(p => p.classList.toggle("on", blkGwPicks.has(p.dataset.val)));
+      const mcRow = document.getElementById("blkMcRow");
+      if (mcRow) mcRow.querySelectorAll(".pill").forEach(p => p.classList.toggle("on", p.dataset.val === blkMcPick));
+    });
+    row.appendChild(b);
+  });
+}
+
 function blkRenderChips() {
   blkBuildSingleChips("blkCatRow", BLK_CATEGORIES,
     () => blkCategoryPick, v => { blkCategoryPick = v; }, "cat");
-  blkBuildSingleChips("blkMcRow", BLK_MCS,
-    () => blkMcPick, v => { blkMcPick = v; });
-  blkBuildMultiChips("blkGwRow", BLK_GWS, blkGwPicks);
+  blkBuildMcChips();
+  blkBuildGwChips();
   blkBuildShiftChips();
   blkBuildMultiChips("blkTeamRow", BLK_TEAMS.map(o => o.value), blkTeamPicks);
 }
@@ -3159,7 +3341,10 @@ function blkResetForm() {
   blkRenderChips();
   document.getElementById("blkStartAt").value = blkLocalDtValue(new Date());
   document.getElementById("blkEndAt").value = "";
+  const wd = document.getElementById("blkWorkDate");
+  if (wd) wd.value = blkLocalDateValue(new Date());
   document.getElementById("blkNotes").value = "";
+  blkApplyTimeMode();
 }
 
 // Server-driven open-blockages list (replaces localStorage-only flow so a
@@ -3232,12 +3417,21 @@ async function blkResolve(id, btn) {
 async function blkSubmit() {
   if (!blkCategoryPick) { toast(t("blkMissing"), true); return; }
 
-  // Read the datetime-local strings and ship them as-is — the browser already
-  // formatted them in local time; the edge function calls new Date(...) which
-  // interprets them in the server's UTC, but since the field literally is local
-  // wall-clock it round-trips correctly for display purposes.
-  const startVal = document.getElementById("blkStartAt").value || blkLocalDtValue(new Date());
-  const endVal   = document.getElementById("blkEndAt").value || null;
+  // Two time modes:
+  //  - Shift mode (≥1 shift picked) → derive start/end from the work-date
+  //    input + the min/max shift bounds. Status will be "closed" (end_at set).
+  //  - Custom mode (no shifts) → use the datetime-local inputs directly;
+  //    end_at blank means status="open" (ongoing).
+  let startVal, endVal;
+  if (blkShiftPicks.size > 0) {
+    const bounds = blkComputeShiftBounds();
+    if (!bounds) { toast(t("blkMissing"), true); return; }
+    startVal = bounds.start;
+    endVal   = bounds.end;
+  } else {
+    startVal = document.getElementById("blkStartAt").value || blkLocalDtValue(new Date());
+    endVal   = document.getElementById("blkEndAt").value || null;
+  }
   const notes    = document.getElementById("blkNotes").value.trim();
 
   const fields = {
@@ -3301,6 +3495,11 @@ document.getElementById("blkRefreshBtn").addEventListener("click", blkLoadOpen);
 // Initial render: chips, start=now, open list (fires fnCall in background).
 blkRenderChips();
 document.getElementById("blkStartAt").value = blkLocalDtValue(new Date());
+{
+  const wd = document.getElementById("blkWorkDate");
+  if (wd && !wd.value) wd.value = blkLocalDateValue(new Date());
+}
+blkApplyTimeMode();
 // Load open blockages on boot, but don't block. Errors stay silent (offline-friendly).
 blkLoadOpen();
 
