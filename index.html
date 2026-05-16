@@ -1210,6 +1210,67 @@ const TAG_SECTIONS = [
 ];
 const TAGS = TAG_SECTIONS.flatMap(s => s.tags.map(name => ({ name, category: s.cssCategory })));
 
+// Display-only French labels for tags.
+// Data stays English in Supabase (canonical key); only UI rendering uses these.
+// Mohssine / Otmane — adjust these in place if a specific term is wrong:
+const TAG_LABELS_FR = {
+  // Green Wall components
+  "Brackets": "Équerres",
+  "Side Breather Membrane - R": "Membrane latérale - D",
+  "Side Breather Membrane - L": "Membrane latérale - G",
+  "Insulation": "Isolation",
+  "Cavity Barrier": "Barrière coupe-feu",
+  "U-Stop": "Butée U",
+  "Omega": "Profilé Oméga",
+  "Gutter": "Gouttière",
+  "Metal Plate": "Plaque métallique",
+  "Breather Membrane": "Membrane pare-pluie",
+  "Rails": "Rails",
+  "Breather Membrane Tape": "Bande pare-pluie",
+  "Penetration Sleeve": "Manchon de pénétration",
+  "BMH - R": "BMH - D",
+  "BMH - L": "BMH - G",
+  "Baskets": "Paniers",
+  // Water
+  "Water Distribution": "Distribution d'eau",
+  "Water Distribution Connection": "Raccord distribution d'eau",
+  "Drip Lines": "Lignes goutte-à-goutte",
+  "Water Evacuation": "Évacuation d'eau",
+  "Water Evacuation Connection": "Raccord évacuation d'eau",
+  // Planter
+  "Small Planter": "Petit bac",
+  "Large Planter": "Grand bac",
+  "Pool Planter": "Bac piscine",
+  "Drainage Board": "Plaque de drainage",
+  "NAP 50": "NAP 50",
+  "Irrigation": "Irrigation",
+  "Irrigation Connection": "Raccord irrigation",
+  "Evacuation": "Évacuation",
+  "Evacuation Connection": "Raccord évacuation",
+  "Substrate": "Substrat",
+  // Pool planter (detailed layers)
+  "Pool Planter - Inspection Box - R": "Bac piscine - Regard - D",
+  "Pool Planter - Inspection Box - L": "Bac piscine - Regard - G",
+  "Pool Planter - Evacuation Connection - R": "Bac piscine - Raccord évac. - D",
+  "Pool Planter - Evacuation Connection - L": "Bac piscine - Raccord évac. - G",
+  "Pool Planter - Drainage Board": "Bac piscine - Plaque de drainage",
+  "Pool Planter - layer 1": "Bac piscine - couche 1",
+  "Pool Planter - layer 2": "Bac piscine - couche 2",
+  "Pool Planter - layer 3": "Bac piscine - couche 3",
+  "Pool Planter - layer 4": "Bac piscine - couche 4",
+  "Pool Planter - Mulch": "Bac piscine - Paillis",
+  // Status
+  "Defect": "Défaut",
+  "Rework": "Reprise",
+  "Issue to Report": "Problème à signaler",
+};
+function tagLabel(name) {
+  if (typeof LANG !== "undefined" && LANG === "fr" && TAG_LABELS_FR[name]) {
+    return TAG_LABELS_FR[name];
+  }
+  return name;
+}
+
 // ============================================================
 // Cookie + captain identity
 // ============================================================
@@ -1572,7 +1633,7 @@ function makeSelectedTagPill(name, cssCategory, onRemove) {
   const b = document.createElement("button");
   b.type = "button";
   b.className = "selectedTagPill " + (cssCategory || "");
-  b.innerHTML = `<span class="lbl">${escapeHtml(name)}</span><span class="x">×</span>`;
+  b.innerHTML = `<span class="lbl">${escapeHtml(tagLabel(name))}</span><span class="x">×</span>`;
   b.addEventListener("click", onRemove);
   return b;
 }
@@ -1645,7 +1706,7 @@ function openTagPicker(opts) {
       b.className = "tpPill " + section.cssCategory + (selected.has(name) ? " on" : "");
       b.dataset.tag = name;
       const count = opts.photoCountFn ? opts.photoCountFn(name) : 0;
-      b.innerHTML = `<span class="name">${escapeHtml(name)}</span>${count > 0 ? `<span class="ct">${count}</span>` : ""}`;
+      b.innerHTML = `<span class="name">${escapeHtml(tagLabel(name))}</span>${count > 0 ? `<span class="ct">${count}</span>` : ""}`;
       b.addEventListener("click", () => {
         if (selected.has(name)) { selected.delete(name); b.classList.remove("on"); }
         else                    { selected.add(name);    b.classList.add("on"); }
@@ -1674,7 +1735,9 @@ function openTagPicker(opts) {
   function applySearch(q) {
     const query = (q || "").trim().toLowerCase();
     bodyEl.querySelectorAll(".tpPill").forEach(p => {
-      const match = !query || p.dataset.tag.toLowerCase().includes(query);
+      const en = p.dataset.tag.toLowerCase();
+      const fr = (TAG_LABELS_FR[p.dataset.tag] || "").toLowerCase();
+      const match = !query || en.includes(query) || fr.includes(query);
       p.classList.toggle("hidden", !match);
     });
     updateUI();
